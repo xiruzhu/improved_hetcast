@@ -26,14 +26,13 @@ class packet_system:
         self.current_time = current_time;
         self.time_modifier = time_modifier;
         self.message_system = message_system;
+        self.client_system = client_system;
 
         self.send_speed = send_speed_per_tick;
         self.receive_speed = receive_speed_per_tick;
-
         self.receive_queue = [];
         self.send_queue = [];
         self.ack_wait_queue = {};
-
         self.log_file = log_dir + system_id;
         log_file = open(self.log_file, "w");
         log_file.close();
