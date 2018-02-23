@@ -16,3 +16,28 @@
 #
 # In terms of responsiveness, we utilize 3 categories, low, medium, high
 # This will depend on what the user needs and is not assigned ahead of time  
+
+import numpy as np
+from enum import Enum
+
+class data_type(Enum):
+    STATUS = 0
+    BROWSING = 1
+    SENSING = 2
+    VIDEOS = 4
+
+class vehicular_data:
+    def __init__(self, vehicle_data_type, data_id, priority):
+        self.priority = priority;
+        self.data_id = data_id;
+        if self.priority == data_type.STATUS:
+            self.data_size = max(200, np.random.normal(1000, 500));
+        elif self.priority == data_type.BROWSING:
+            self.data_size = max( 4000, np.random.normal(50000, scale=200000));
+        elif self.priority == data_type.SENSING:
+            self.data_size = max( 4000, np.random.normal(200000, scale=500000));
+        elif self.priority == data_type.VIDEOS:
+            self.data_size = max( 100000, np.random.normal(1000000, scale=2000000));
+
+class decaying_data_generator:
+    
