@@ -91,7 +91,7 @@ class map_system:
             plt.show()
         plt.close();
         del fig;
-    
+
 #Return a list of access point centered around the center of the map ... 
 def gaussian_placement(num_access_node, map_size, access_type, wireless_range):
     access_node_list = []
@@ -122,4 +122,5 @@ class wireless_simulation:
             self.map_system.add_access_point(lte_list[i]);
         self.map_system.visualize_coverage_map((800, 800));
 
-wireless_simulation(200, 25);
+sim = wireless_simulation(200, 25);
+print(sim.map_system.get_access_points_in_range([16000, 16000]))
