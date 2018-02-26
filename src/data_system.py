@@ -130,11 +130,15 @@ class vehicle_data_system:
         else:
             self.failures += 1;
 
+    #Note we send status messages once every second
     def update(self):
         self.current_time += self.time_decay;
         new_data_id = "data_id:" + self.vehicle.get_id() + "," + str(self.current_time);
         self.data_item_dict[new_data_id] = vehicular_data(new_data_id, self.vehicle.get_location());
 
+        if math.ceil(self.current_time) == self.current_time:
+            #Time to send a status message
+            self.packet_system.
 
 
 

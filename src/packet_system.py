@@ -81,19 +81,19 @@ class packet_system:
         self.tasks_queue = {};
 
     #Send a request for a specific data ... To simplify matters, each request is for one data type
-    def request_data(self, task_id, request, receiver_id, callback_function, deadline):
-        new_task = task(task_id, data_size, self.packet_size, task_callback, deadline);
+    def request_data(self, task_id, data_size, request, receiver_id, callback_function, deadline):
+        new_task = task(task_id, data_size, self.packet_size, callback_function, deadline);
         new_packet = self.create_req_packet(receiver_id, task_id, request);
         self.send_packet(new_packet);
-        new_task.set_packet_ack(new_packet.seq_num);
+        new_task.init_packet_ack(new_packet.seq_num);
         self.tasks_queue[task_id];
 
     def upload_data(self, task_id, data_size, receiver_id, callback_function, deadline):
-        new_task = task(task_id, data_size, self.packet_size, task_callback, deadline);
-        for i in range(num_packets):
+        new_task = task(task_id, data_size, self.packet_size, callback_function, deadline);
+        for i in range(new_task.num_packets):
             new_packet = self.create_data_packet(receiver_id, task_id);
             self.send_packet(new_packet);
-            new_task.set_packet_ack(new_packet.seq_num);
+            new_task.init_packet_ack(new_packet.seq_num);
         self.tasks_queue[task_id];
 
     def receive_packet(self, packet):
