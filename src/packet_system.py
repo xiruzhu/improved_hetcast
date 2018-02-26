@@ -1,6 +1,11 @@
 #Packet Object ... 
 from enum import Enum
 
+class task_outcome(Enum):
+    ONGOING = 0
+    FAILED = 1
+    SUCCESS = 2
+
 class message_type(Enum):
     ACK = 0
     DATA = 1
@@ -16,8 +21,44 @@ class packet:
         self.request = request;
         self.task_id = task_id;
 
+class task:
+    def __init__(self, task_id, data_size, packet_size, task_callback, deadline):
+        self.num_packets = (data_size + packet_size - 1)//packet_size;
+        self.data_size = data_size;
+        self.task_callback = task_callback;
+        self.deadline = deadline;
+        self.packet_ack = {};
+        self.ack_count = 0;
+        self.outcome = task_outcome.ONGOING;
+
+    #initializes a packet
+    def init_packet_ack(self, seq_num):
+        self.packet_ack[seq_num] = None;
+
+    #Gets task status
+    def get_task_status(self):
+        return self.outcome;
+
+    #Set the ack status of a task's packet to status
+    def set_packet_ack(self, seq_num, status):
+        if status == False:
+            self.outcome = task_outcome.FAILED;
+        else:
+            self.packet_ack[seq_num] = True;
+            self.ack_count += 1;
+            if self.ack_count == len(self.packet_ack):
+                self.outcome = True;
+    
+    #Returns false if failed check
+    #True otherwise
+    def check_deadline(self, current_time):
+        if current_time > self.deadline:
+            self.outcome = False;
+            return False;
+        return True;
+
 class packet_system:
-    def __init__(self, system_id, message_system, client_system, log_dir="../logs/", time_modifier=1,send_speed_per_tick=1000, receive_speed_per_tick=1000,current_time=0, packet_size=2000, deadline=3):
+    def __init__(self, system_id, client_system, message_system, log_dir="../logs/", time_modifier=0.01,send_speed_per_tick=1000, receive_speed_per_tick=1000,current_time=0, packet_size=2000, deadline=3):
         self.packet_size=packet_size;
         self.sequence_number = 0;
         self.task_number = 0;
@@ -39,29 +80,20 @@ class packet_system:
 
         self.tasks_queue = {};
 
-    def get_task_id(self):
-        self.task_number += 1;
-        if self.task_number % 2147483647 == 0:
-            self.task_number = 0;
-        return self.task_number;
-
     #Send a request for a specific data ... To simplify matters, each request is for one data type
-    def request_data(self, request, receiver_id, callback_function, deadline):
-        task_id = self.get_task_id();
-        new_task = {"data_size":self.packet_size, "num_packets":1, "task_callback":callback_function, "packet_ack":{}, "deadline":deadline}
-        new_packet = self.create_data_packet(receiver_id, task_id);
+    def request_data(self, task_id, request, receiver_id, callback_function, deadline):
+        new_task = task(task_id, data_size, self.packet_size, task_callback, deadline);
+        new_packet = self.create_req_packet(receiver_id, task_id, request);
         self.send_packet(new_packet);
-        new_task["packet_ack"][new_packet.seq_num] = None;
+        new_task.set_packet_ack(new_packet.seq_num);
         self.tasks_queue[task_id];
 
-    def upload_data(self, data_size, receiver_id, callback_function, deadline):
-        task_id = self.get_task_id();
-        num_packets = (data_size + self.packet_size - 1)//self.packet_size;
-        new_task = {"data_size":data_size, "num_packets":num_packets, "task_callback":callback_function, "packet_ack":{}, "deadline":deadline}
+    def upload_data(self, task_id, data_size, receiver_id, callback_function, deadline):
+        new_task = task(task_id, data_size, self.packet_size, task_callback, deadline);
         for i in range(num_packets):
             new_packet = self.create_data_packet(receiver_id, task_id);
             self.send_packet(new_packet);
-            new_task["packet_ack"][new_packet.seq_num] = None;
+            new_task.set_packet_ack(new_packet.seq_num);
         self.tasks_queue[task_id];
 
     def receive_packet(self, packet):
@@ -82,23 +114,13 @@ class packet_system:
     def update(self):
         #First we clean up the system of completed tasks ... 
         for task in self.tasks_queue:
-            task_status = 0;
-            for packet in self.tasks_queue[task]["packet_ack"]:
-                if self.tasks_queue[task]["packet_ack"][packet] == True:
-                    task_status += 1;
-                elif self.tasks_queue[task]["packet_ack"][packet] == False:
-                    task_status = -1;
-                    break;
-            if task_status == -1:
+            if task.get_task_status() == task_outcome.FAILED or task.check_deadline() == False:
                 #Task failed .... 
                 failed_task = self.tasks_queue.pop(task);
-                failed_task["task_callback"](failed_task, False);
-            elif task_status == len(self.tasks_queue[task]["packet_ack"]):
+                failed_task.task_callback(failed_task);
+            elif task.get_task_status() == task_outcome.SUCCESS:
                 success_task = self.tasks_queue.pop(task);
-                success_task["task_callback"](success_task, True);
-            elif self.tasks_queue[task]["deadline"] < self.current_time:
-                failed_task = self.tasks_queue.pop(task);
-                failed_task["task_callback"](failed_task, False);
+                success_task.task_callback(success_task);
         #First we receive data ....
         for i in range(min(self.receive_speed, len(self.receive_queue))):
             received_data = self.receive_queue.pop(0);            
@@ -116,7 +138,7 @@ class packet_system:
                 if ack_id in self.ack_wait_queue:
                     original_packet = self.ack_wait_queue.pop(ack_id);
                     self.log_data(message_type.ACK, str(original_packet.send_time) + "," + str(self.current_time))                    
-                    self.tasks_queue[original_packet.task_id][original_packet.seq_num] = True;
+                    self.tasks_queue[original_packet.task_id].set_packet_ack(original_packet.seq_num ,True);
                 #otherwise, it means an acknowledgement for the item has already been received ... 
         #Now after we handled all the received data we can handle 
         #We must handle the data with acknowledgement we have not received which is past the deadline ... 
@@ -140,8 +162,8 @@ class packet_system:
             self.sequence_number = 0;
         return new_packet;
 
-    def create_req_packet(self, receiver_id, task_id, data_type=message_type.REQ):
-        new_packet = packet(self.system_id, receiver_id, task_id, self.current_time, self.sequence_number, data_type);
+    def create_req_packet(self, receiver_id, task_id, request, data_type=message_type.REQ):
+        new_packet = packet(self.system_id, receiver_id, task_id, self.current_time, self.sequence_number, data_type, request=request);
         self.sequence_number += 1;
         if self.sequence_number % 2147483647 == 0:
             self.sequence_number = 0;
