@@ -9,11 +9,6 @@ class node_type(Enum):
     RSU = 1
     LTE = 2
 
-class wide_access_network_node:
-    #The WAN only has access to RSU and LTE, not vehicles directly ... 
-    def __init__(self, RSU_list, LTE_list):
-        print("TBD")
-
 class access_node:
     def __init__(self, access_id, position, access_node_type, wireless_radius, upload_speed=1000, download_speed=1000, distance_error=None, collision_error=None):
         self.id = access_id;

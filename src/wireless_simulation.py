@@ -121,6 +121,3 @@ class wireless_simulation:
         for i in range(num_lte):
             self.map_system.add_access_point(lte_list[i]);
         self.map_system.visualize_coverage_map((800, 800));
-
-sim = wireless_simulation(200, 25);
-print(sim.map_system.get_access_points_in_range([16000, 16000]))

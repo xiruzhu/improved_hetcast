@@ -58,7 +58,7 @@ class task:
         return True;
 
 class packet_system:
-    def __init__(self, system_id, client_system, message_system, log_dir="../logs/", time_modifier=0.01,send_speed_per_tick=1000, receive_speed_per_tick=1000,current_time=0, packet_size=2000, deadline=3):
+    def __init__(self, system_id, client_system, message_system, log_dir="../logs/", time_modifier=0.1,send_speed_per_tick=1000, receive_speed_per_tick=1000,current_time=0, packet_size=2000, deadline=3):
         self.packet_size=packet_size;
         self.sequence_number = 0;
         self.task_number = 0;
@@ -77,19 +77,19 @@ class packet_system:
         self.log_file = log_dir + system_id;
         log_file = open(self.log_file, "w");
         log_file.close();
-
         self.tasks_queue = {};
 
     #Send a request for a specific data ... To simplify matters, each request is for one data type
-    def request_data(self, task_id, data_size, request, receiver_id, callback_function, deadline):
-        new_task = task(task_id, data_size, self.packet_size, callback_function, deadline);
+    def request_data(self, task_id, data_size, request, receiver_id, callback_function):
+        new_task = task(task_id, data_size, self.packet_size, callback_function, self.deadline);
         new_packet = self.create_req_packet(receiver_id, task_id, request);
         self.send_packet(new_packet);
         new_task.init_packet_ack(new_packet.seq_num);
         self.tasks_queue[task_id];
 
-    def upload_data(self, task_id, data_size, receiver_id, callback_function, deadline):
-        new_task = task(task_id, data_size, self.packet_size, callback_function, deadline);
+    #Uploads data ... 
+    def upload_data(self, task_id, data_size, receiver_id, callback_function):
+        new_task = task(task_id, data_size, self.packet_size, callback_function, self.deadline);
         for i in range(new_task.num_packets):
             new_packet = self.create_data_packet(receiver_id, task_id);
             self.send_packet(new_packet);
@@ -130,7 +130,7 @@ class packet_system:
             elif received_data.request_data == message_type.REQ:
                 #....
                 self.send_packet(self.create_ack_packet(received_data));
-                self.client_system.data_request(received_data);
+                self.client_system.handle_data_request(received_data);
                 self.log_data(message_type.REQ, str(received_data.send_time) + "," + str(self.current_time))                    
             else:
                 #Received an acknowledgement ... 
