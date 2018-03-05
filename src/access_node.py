@@ -11,16 +11,22 @@ class node_type(Enum):
 
 class access_node:
     def __init__(self, access_id, position, access_node_type, wireless_radius, upload_speed=1000, download_speed=1000, distance_error=None, collision_error=None):
-        self.id = access_id;
+        self.access_id = access_id;
         self.position = position;
         self.access_node_type = access_node_type;
         self.wireless_radius = wireless_radius;
         self.upload_speed = upload_speed;
         self.download_speed = download_speed;
 
-        self.distance_error = distance_error;
-        self.interference_error = collision_error;
+        self.distance_error = self.linear_distance_error;
+        self.interference_error = self.linear_collision_error;
         self.error_rate = 0;
+
+    def linear_distance_error(self, distance, max_error=0.3):
+        return max_error * (distance/self.wireless_radius)
+
+    def linear_collision_error(self, num_message, max_error=0.3):
+        return max_error * (num_message/self.download_speed);
 
     def compute_distance(self, position):
         dist = (position[0] - self.position[0]) ** 2 + (position[1] - self.position[1]) ** 2;

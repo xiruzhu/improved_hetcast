@@ -113,11 +113,11 @@ class wireless_simulation:
         np.random.seed(random_seed);
         self.map_system = map_system(levels=3, drop=5);
         
-        rsu_list = RSU_place(num_rsu, map_size, node_type.RSU, RSU_range);
+        self.rsu_list = RSU_place(num_rsu, map_size, node_type.RSU, RSU_range);
         for i in range(num_rsu):
-            self.map_system.add_access_point(rsu_list[i]);
+            self.map_system.add_access_point(self.rsu_list[i]);
     
-        lte_list = LTE_place(num_lte, map_size, node_type.LTE, LTE_range);
+        self.lte_list = LTE_place(num_lte, map_size, node_type.LTE, LTE_range);
         for i in range(num_lte):
-            self.map_system.add_access_point(lte_list[i]);
+            self.map_system.add_access_point(self.lte_list[i]);
         self.map_system.visualize_coverage_map((800, 800));
