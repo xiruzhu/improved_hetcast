@@ -58,19 +58,19 @@ class task:
         return True;
 
 class packet_system:
-    def __init__(self, system_id, client_system, message_system, log_dir="../logs/", time_modifier=0.1,send_speed_per_tick=1000, receive_speed_per_tick=1000,current_time=0, packet_size=2000, deadline=3):
+    def __init__(self, system_id, data_system, message_system, log_dir="../logs/", time_decay=0.1, up_speed=1000, down_speed=1000,current_time=0, packet_size=2000, deadline=3):
         self.packet_size=packet_size;
         self.sequence_number = 0;
         self.task_number = 0;
         self.deadline = deadline;
         self.system_id = system_id;
         self.current_time = current_time;
-        self.time_modifier = time_modifier;
+        self.time_decay = time_decay;
         self.message_system = message_system;
-        self.client_system = client_system;
+        self.data_system = data_system;
 
-        self.send_speed = send_speed_per_tick;
-        self.receive_speed = receive_speed_per_tick;
+        self.send_speed = up_speed;
+        self.receive_speed = down_speed;
         self.receive_queue = [];
         self.send_queue = [];
         self.ack_wait_queue = {};
@@ -130,7 +130,7 @@ class packet_system:
             elif received_data.request_data == message_type.REQ:
                 #....
                 self.send_packet(self.create_ack_packet(received_data));
-                self.client_system.handle_data_request(received_data);
+                self.data_system.handle_data_request(received_data);
                 self.log_data(message_type.REQ, str(received_data.send_time) + "," + str(self.current_time))                    
             else:
                 #Received an acknowledgement ... 
@@ -152,8 +152,8 @@ class packet_system:
         #Finally, we must handle sending data
         for i in range(min(self.send_speed, len(self.send_queue))):
             new_packet = self.send_queue.pop(0);
-            self.message_system.send_packet(new_packet);
-        self.current_time += self.time_modifier;
+            self.message_system.upload_data(new_packet);
+        self.current_time += self.time_decay;
 
     def create_data_packet(self, receiver_id, task_id, data_type=message_type.DATA):
         new_packet = packet(self.system_id, receiver_id, task_id, self.current_time, self.sequence_number, data_type);

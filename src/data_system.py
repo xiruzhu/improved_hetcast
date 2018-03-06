@@ -181,12 +181,12 @@ class vehicle_data_system:
     #This message can be considered of size low
     #Furthermore, the system stores data available ... 
     
-    def __init__(self, vehicle_object, message_system, data_system, current_time, global_data_rate=0.10, local_data_rate=0.20, time_decay=0.1, data_request_rate=1, status_size=1000):
+    def __init__(self, vehicle_object, message_system, global_data_system, current_time, global_data_rate=0.10, local_data_rate=0.20, time_decay=0.1, data_request_rate=1, status_size=1000):
         self.current_time = current_time;
         self.vehicle = vehicle_object;
         self.data_item_dict = {};
         self.message_system = message_system;
-        self.data_system = data_system;
+        self.global_data_system = global_data_system;
         self.status_size = status_size;
         self.packet_system = packet_system("packet_system:" + vehicle_object.get_id(), self, message_system, current_time=current_time, time_modifier=time_decay);
         self.failures = 0;
@@ -215,7 +215,7 @@ class vehicle_data_system:
             self.failures += 1;
 
     def select_data(self):
-        data_need = self.data_system.select_item();
+        data_need = self.global_data_system.select_item();
         if not data_need.check_origin(self.vehicle.get_id()):
             data_size = np.random.randint(0, 4);
             if data_size == 0:
@@ -234,7 +234,7 @@ class vehicle_data_system:
         self.current_time += self.time_decay;
         new_data_id = "data_id:" + self.vehicle.get_id() + "," + str(self.current_time);
         self.data_item_dict[new_data_id] = vehicular_data(self.vehicle.get_id(), new_data_id, self.vehicle.get_location());
-        self.data_system.add_data_item(self.data_item_dict[new_data_id]);
+        self.global_data_system.add_data_item(self.data_item_dict[new_data_id]);
         if math.ceil(self.current_time) == self.current_time:
             #Time to send a status message ... 
             self.packet_system.upload_data("status:" + self.vehicle.get_id() + ":" + str(self.current_time), self.status_size, self.vehicle.get_local_rsu_id(), self.task_callback);

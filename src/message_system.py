@@ -1,8 +1,10 @@
 #Messaging system for the system ... 
 #Here we define network of nodes
+from packet_system import packet_system
 from data_system import complete_data_system
-from wireless_simulation import wireless_simulation
+from wireless_system import wireless_system
 from vehicle import vehicle
+import math
 
 class message_queue:
     def __init__(self, current_time, time_decay, message_system, message_delay=[0.2, 0.2]):
@@ -28,57 +30,79 @@ class message_queue:
         self.current_time += self.time_decay;
 
 
-
 class messaging_system:
-    def __init__(self, current_time, traci, time_decay=0.1, num_lte=100, num_rsu=1000):
+    def __init__(self, traci, wireless_system, current_time, time_decay=0.1, num_lte=100, num_rsu=1000, lte_upload=20000, lte_down=10000, rsu_upload=20000, rsu_down=10000, veh_upload=100, veh_down=400):
         #So in this system, we must keep track of all elements which can receive and send messages ... 
-        self.wireless_system = wireless_simulation(num_lte, num_rsu);
+        self.wireless_system = wireless_system
         self.current_time = current_time;
         self.time_decay = time_decay;
         self.traci = traci;
-
+        self.lte_upload = lte_upload;
+        self.lte_down = lte_down;
+        self.rsu_upload = rsu_upload;
+        self.rsu_down = rsu_down;
+        self.veh_upload = veh_upload;
+        self.veh_down = veh_down;
         #These two list does not change unless one of these go down
-        self.rsu_list = {};
-        self.lte_list = {};
-
+        self.fixed_message_queues = {};
         for access_node in self.wireless_system.rsu_list:
-            self.rsu_list[access_node.access_id] = message_queue(current_time, time_decay, self);
+            self.fixed_message_queues[access_node.access_id] = message_queue(current_time, time_decay, self);
         
         for access_node in self.wireless_system.lte_list:
-            self.rsu_list[access_node.access_id] = message_queue(current_time, time_decay, self);
-
-        #Data system ... 
-        self.complete_data_system = complete_data_system(self.current_time, self.wireless_system.map_size)
+            self.fixed_message_queues[access_node.access_id] = message_queue(current_time, time_decay, self);
         
         #This list does change if it goes down
-        self.vehicle_dict = {};
-        self.update_vehicle_dict();
+        self.vehicle_message_queues = {};
+        #Next We must keep track of all the packet system
+        self.fixed_packet_systems = {};
+        for key in self.fixed_message_queues:
+            if key in self.wireless_system.lte_list:
+                self.fixed_packet_systems[key] = packet_system(key, wireless_system, self, time_decay=time_decay, up_speed=lte_upload, down_speed=lte_down);
+            else:
+                self.fixed_packet_systems[key] = packet_system(key, wireless_system, self, time_decay=time_decay, up_speed=rsu_upload, down_speed=rsu_down);
+        self.vehicle_packet_systems = {};
 
-    def send_packet_to_destination(self, packet):
+        #Update everything ... 
+        self.update_message_system();
+
+    def transfer_to_packet_system(self, packet):
+        print("TBD");
+
+    def upload_data(self, packet):
         print("TBD")
         # if packet.receiver_id in self.vehicle_dict:
         #     #At this point compute an error rate 
         #     self.vehicle_dict[packet.receiver_id].receive_message(packet);
 
-    def pass_message_to_packet_system(self, packet):
+    def download_data(self, packet):
         print("TBD")
         # if packet.receiver_id in self.vehicle_dict:
         #     self.vehicle_dict[packet.receiver_id].receive_message(packet);
         # elif packet.receiver_id in self.vehicle_dict:
         #     self.vehicle_dict[packet.receiver_id].receive_message(packet);
 
-    def update_vehicle_dict(self):
-        updated_vehicle_list = self.traci.vehicle.getIDList();
+    def update_vehicle_message_queue(self):
         new_vehicle_dict = {};
-        for vehicle_id in updated_vehicle_list:
-            if vehicle_id in self.vehicle_dict:
-                new_vehicle_dict[vehicle_id] = self.vehicle_dict[vehicle_id];
+        for vehicle_id in self.updated_vehicle_list:
+            if vehicle_id in self.vehicle_message_queues:
+                new_vehicle_dict[vehicle_id] = self.vehicle_message_queues[vehicle_id];
             else:
-                new_vehicle_dict[vehicle_id] = vehicle(vehicle_id, self, self.complete_data_system, self.traci, self.current_time);
-        self.vehicle_dict = new_vehicle_dict;
+                new_vehicle_dict[vehicle_id] = message_queue(self, self.current_time, self.time_decay, self);
+        self.vehicle_message_queues = new_vehicle_dict;
+
+    def update_vehicle_packet_system(self):
+        new_vehicle_dict = {};
+        for vehicle_id in self.updated_vehicle_list:
+            if vehicle_id in self.vehicle_packet_systems:
+                new_vehicle_dict[vehicle_id] = self.vehicle_packet_systems[vehicle_id];
+            else:
+                new_vehicle_dict[vehicle_id] = packet_system(vehicle_id, self.wireless_system, self, time_decay=self.time_decay, up_speed=self.veh_upload, down_speed=self.veh_down);
+        self.vehicle_packet_systems = new_vehicle_dict;
+
+    def update_message_system(self):
+        self.updated_vehicle_list = self.traci.vehicle.getIDList();
+        if math.ceil(self.current_time) == self.current_time:
+            self.update_vehicle_message_queue();
+            self.update_vehicle_packet_system();
         self.current_time += self.time_decay;
-
-
-            
-
 
