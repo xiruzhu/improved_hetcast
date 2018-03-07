@@ -17,7 +17,7 @@
 # In terms of responsiveness, we utilize 3 categories, low, medium, high
 # This will depend on what the user needs and is not assigned ahead of time  
 
-from packet_system import packet_system, task_outcome
+from packet_system import task_outcome
 import numpy as np
 from enum import Enum
 import math
@@ -181,14 +181,13 @@ class vehicle_data_system:
     #This message can be considered of size low
     #Furthermore, the system stores data available ... 
     
-    def __init__(self, vehicle_object, message_system, global_data_system, current_time, global_data_rate=0.10, local_data_rate=0.20, time_decay=0.1, data_request_rate=1, status_size=1000):
+    def __init__(self, vehicle_object, global_data_system, current_time, global_data_rate=0.10, local_data_rate=0.20, time_decay=0.1, data_request_rate=1, status_size=1000):
         self.current_time = current_time;
         self.vehicle = vehicle_object;
         self.data_item_dict = {};
         self.message_system = message_system;
         self.global_data_system = global_data_system;
         self.status_size = status_size;
-        self.packet_system = packet_system("packet_system:" + vehicle_object.get_id(), self, message_system, current_time=current_time, time_modifier=time_decay);
         self.failures = 0;
         self.success = 0;
         
@@ -206,7 +205,7 @@ class vehicle_data_system:
     def handle_data_request(self, packet):
         requested_item = self.get_data(packet.request["data_id"]);
         data_size = packet.request["data_size"];     
-        self.packet_system.upload_data("data:" + self.vehicle.get_id() + ":" + str(self.current_time), data_size, packet.sender_id, self.task_callback);
+        self.vehicle.upload_data("data:" + self.vehicle.get_id() + ":" + str(self.current_time), data_size, packet.sender_id, self.task_callback);
 
     def task_callback(self, task):
         if task.outcome == task_outcome.SUCCESS:
@@ -227,21 +226,21 @@ class vehicle_data_system:
             else:
                 data_size = data_need.get_data_size(data_type.HUG);
             request = {"data_id":data_need.data_id, "data_size":data_size};
-            self.packet_system.request_data("request:" + self.vehicle.get_id() + ":" + str(self.current_time), self.status_size, request, data_need.origin, self.task_callback);
+            self.vehicle.request_data("request:" + self.vehicle.get_id() + ":" + str(self.current_time), self.status_size, request, data_need.origin, self.task_callback);
 
     #Note we send status messages once every second
     def update(self):
-        self.current_time += self.time_decay;
         new_data_id = "data_id:" + self.vehicle.get_id() + "," + str(self.current_time);
         self.data_item_dict[new_data_id] = vehicular_data(self.vehicle.get_id(), new_data_id, self.vehicle.get_location());
         self.global_data_system.add_data_item(self.data_item_dict[new_data_id]);
         if math.ceil(self.current_time) == self.current_time:
-            #Time to send a status message ... 
-            self.packet_system.upload_data("status:" + self.vehicle.get_id() + ":" + str(self.current_time), self.status_size, self.vehicle.get_local_rsu_id(), self.task_callback);
+            #Time to send a status message ... we can directly send data as such without need for scheduler ... 
+            self.vehicle.upload_data("status:" + self.vehicle.get_id() + ":" + str(self.current_time), self.status_size, self.vehicle.get_local_rsu_id(), self.task_callback);
         likelihood = np.random.ranf();
         if likelihood <= self.local_data_rate:
             self.select_data();
         likelihood = np.random.ranf();
         if likelihood <= self.global_data_rate:
             self.select_data();
+        self.current_time += self.time_decay;
 

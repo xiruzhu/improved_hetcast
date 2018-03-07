@@ -26,7 +26,7 @@ class message_queue:
             self.message_queue[packet].delay_value -= self.time_decay;
             packets_to_send.append(packet)
         for packet_id in packets_to_send:
-            self.message_system.pass_message_to_packet_system(self.message_queue.pop(packet_id));
+            self.message_system.transfer_to_packet_system(self.message_queue.pop(packet_id));
         self.current_time += self.time_decay;
 
 
@@ -63,23 +63,31 @@ class messaging_system:
         self.vehicle_packet_systems = {};
 
         #Update everything ... 
-        self.update_message_system();
+        self.update();
 
     def transfer_to_packet_system(self, packet):
-        print("TBD");
+        #First we must find the packet system for the receiver
+        if packet.receiver_id in self.fixed_packet_systems:
+            system = self.fixed_packet_systems[packet.receiver_id];
+        elif packet.receiver_id in self.vehicle_packet_systems:
+            system = self.vehicle_packet_systems[packet.receiver_id];
+        else:
+            #Cannot find the packet system and therefore it fails
+            return;
+        #Otherwise, just send the message ... 
+        system.receive_message(packet);        
 
     def upload_data(self, packet):
-        print("TBD")
-        # if packet.receiver_id in self.vehicle_dict:
-        #     #At this point compute an error rate 
-        #     self.vehicle_dict[packet.receiver_id].receive_message(packet);
-
-    def download_data(self, packet):
-        print("TBD")
-        # if packet.receiver_id in self.vehicle_dict:
-        #     self.vehicle_dict[packet.receiver_id].receive_message(packet);
-        # elif packet.receiver_id in self.vehicle_dict:
-        #     self.vehicle_dict[packet.receiver_id].receive_message(packet);
+        #First we must find the packet system for the receiver
+        if packet.receiver_id in self.fixed_message_queues:
+            queue = self.fixed_message_queues[packet.receiver_id];
+        elif packet.receiver_id in self.vehicle_message_queues:
+            queue = self.vehicle_message_queues[packet.receiver_id];
+        else:
+            #Cannot find the packet system and therefore it fails
+            return;
+        #Otherwise, just send the message ... 
+        queue.add_message(packet);  
 
     def update_vehicle_message_queue(self):
         new_vehicle_dict = {};
@@ -99,10 +107,14 @@ class messaging_system:
                 new_vehicle_dict[vehicle_id] = packet_system(vehicle_id, self.wireless_system, self, time_decay=self.time_decay, up_speed=self.veh_upload, down_speed=self.veh_down);
         self.vehicle_packet_systems = new_vehicle_dict;
 
-    def update_message_system(self):
+    def update(self):
         self.updated_vehicle_list = self.traci.vehicle.getIDList();
         if math.ceil(self.current_time) == self.current_time:
             self.update_vehicle_message_queue();
             self.update_vehicle_packet_system();
+        for key in self.fixed_packet_systems:
+            self.fixed_packet_systems[key].update();
+        for key in self.vehicle_packet_systems:
+            self.vehicle_packet_systems[key].update();
         self.current_time += self.time_decay;
 

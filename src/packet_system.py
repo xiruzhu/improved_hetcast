@@ -58,7 +58,7 @@ class task:
         return True;
 
 class packet_system:
-    def __init__(self, system_id, data_system, message_system, log_dir="../logs/", time_decay=0.1, up_speed=1000, down_speed=1000,current_time=0, packet_size=2000, deadline=3):
+    def __init__(self, system_id, wireless_system, message_system, log_dir="../logs/", time_decay=0.1, up_speed=1000, down_speed=1000,current_time=0, packet_size=2000, deadline=3):
         self.packet_size=packet_size;
         self.sequence_number = 0;
         self.task_number = 0;
@@ -67,7 +67,7 @@ class packet_system:
         self.current_time = current_time;
         self.time_decay = time_decay;
         self.message_system = message_system;
-        self.data_system = data_system;
+        self.wireless_system = wireless_system;
 
         self.send_speed = up_speed;
         self.receive_speed = down_speed;
@@ -78,23 +78,39 @@ class packet_system:
         log_file = open(self.log_file, "w");
         log_file.close();
         self.tasks_queue = {};
+    
+    def get_request_packet(self, task_id, data_size, request, receiver_id, callback_function):
+        new_task = task(task_id, data_size, self.packet_size, callback_function, self.deadline + self.current_time);
+        new_packet = self.create_req_packet(receiver_id, task_id, request);
+        self.tasks_queue[task_id] = new_task;
+        return new_packet;
+
+    #Uploads data ... 
+    def get_upload_packets(self, task_id, data_size, receiver_id, callback_function, deadline):
+        new_task = task(task_id, data_size, self.packet_size, callback_function, deadline);
+        packet_list = [];
+        for i in range(new_task.num_packets):
+            new_packet = self.create_data_packet(receiver_id, task_id);
+            packet_list.append(new_packet);
+        self.tasks_queue[task_id] = new_task;
+        return packet_list;
 
     #Send a request for a specific data ... To simplify matters, each request is for one data type
     def request_data(self, task_id, data_size, request, receiver_id, callback_function):
-        new_task = task(task_id, data_size, self.packet_size, callback_function, self.deadline);
+        new_task = task(task_id, data_size, self.packet_size, callback_function, self.deadline + self.current_time);
         new_packet = self.create_req_packet(receiver_id, task_id, request);
         self.send_packet(new_packet);
         new_task.init_packet_ack(new_packet.seq_num);
-        self.tasks_queue[task_id];
+        self.tasks_queue[task_id] = new_task;
 
     #Uploads data ... 
     def upload_data(self, task_id, data_size, receiver_id, callback_function):
-        new_task = task(task_id, data_size, self.packet_size, callback_function, self.deadline);
+        new_task = task(task_id, data_size, self.packet_size, callback_function, self.deadline + self.current_time);
         for i in range(new_task.num_packets):
             new_packet = self.create_data_packet(receiver_id, task_id);
             self.send_packet(new_packet);
             new_task.init_packet_ack(new_packet.seq_num);
-        self.tasks_queue[task_id];
+        self.tasks_queue[task_id] = new_task;
 
     def receive_packet(self, packet):
         self.receive_queue.append(packet);
@@ -130,7 +146,7 @@ class packet_system:
             elif received_data.request_data == message_type.REQ:
                 #....
                 self.send_packet(self.create_ack_packet(received_data));
-                self.data_system.handle_data_request(received_data);
+                self.wireless_system.handle_data_request(received_data);
                 self.log_data(message_type.REQ, str(received_data.send_time) + "," + str(self.current_time))                    
             else:
                 #Received an acknowledgement ... 
