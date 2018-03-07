@@ -22,11 +22,6 @@ import numpy as np
 from enum import Enum
 import math
 
-class data_priority(Enum):
-    LOW = 0
-    MED = 1
-    HIG = 2
-
 class data_type(Enum):
     LOW = 0
     MID = 1
@@ -139,6 +134,9 @@ class complete_data_system:
             self.global_data_system.add_data_item(vehicular_data(GLOBAL_DATA, GLOBAL_DATA + ":" + str(i), [0, 0]));
         self.global_data_system.update();
 
+        #Create a final system which includes all data item without distance 
+        self.global_decay_system = decaying_data_system(current_time, [0, 0], 0, global_system=False);
+
         #Local data system
         x_half = (map_size[0]/grid_size[0])/2;
         y_half = (map_size[0]/grid_size[0])/2;
@@ -153,10 +151,13 @@ class complete_data_system:
     def add_data_item(self, data_item):
         for system in self.decay_system_mat:
             system.add_data_item(data_item);
+        self.global_decay_system.add_data_item(data_item);
     
     def update(self):
         for system in self.decay_system_mat:
             system.update();
+        self.global_decay_system.update();
+        self.current_time += self.time_decay;
 
     def randomly_select_local_data(self):
         #This is meant to randomly select local data ... 
@@ -173,6 +174,20 @@ class complete_data_system:
     def select_data_global(self):
         return self.global_data_system.select_item();
 
+    def select_global_decayed_data(self):
+        return self.global_decay_system.select_item();
+
+class fixed_data_system(vehicular_data):
+    #Note we send status messages once every second
+    def update(self):
+        likelihood = np.random.ranf();
+        if likelihood <= self.local_data_rate:
+            self.select_data();
+        likelihood = np.random.ranf();
+        if likelihood <= self.global_data_rate:
+            self.select_data(local=False, decayed=True);
+        self.current_time += self.time_decay;
+
 
 #This class deals with how each vehicle generates data ... 
 class vehicle_data_system:
@@ -181,15 +196,16 @@ class vehicle_data_system:
     #This message can be considered of size low
     #Furthermore, the system stores data available ... 
     
-    def __init__(self, vehicle_object, global_data_system, current_time, global_data_rate=0.10, local_data_rate=0.20, time_decay=0.1, data_request_rate=1, status_size=1000):
+    def __init__(self, network_access_node, global_data_system, current_time, global_data_rate=0.10, local_data_rate=0.20, time_decay=0.1, data_request_rate=1, status_size=1000, deadline_range=[5, 200]):
         self.current_time = current_time;
-        self.vehicle = vehicle_object;
+        self.network_access_node = network_access_node;
         self.data_item_dict = {};
         self.message_system = message_system;
         self.global_data_system = global_data_system;
         self.status_size = status_size;
         self.failures = 0;
         self.success = 0;
+        self.deadline_range = deadline_range;
         
         self.global_data_rate = global_data_rate * time_decay;
         self.local_data_rate = local_data_rate * time_decay;
@@ -205,7 +221,8 @@ class vehicle_data_system:
     def handle_data_request(self, packet):
         requested_item = self.get_data(packet.request["data_id"]);
         data_size = packet.request["data_size"];     
-        self.vehicle.upload_data("data:" + self.vehicle.get_id() + ":" + str(self.current_time), data_size, packet.sender_id, self.task_callback);
+        deadline = np.random.uniform(self.deadline_range[0], self.deadline_range[1]);
+        self.network_access_node.upload_data("data:" + self.network_access_node.get_id() + ":" + str(self.current_time), data_size, packet.sender_id, self.task_callback, deadline);
 
     def task_callback(self, task):
         if task.outcome == task_outcome.SUCCESS:
@@ -213,9 +230,15 @@ class vehicle_data_system:
         else:
             self.failures += 1;
 
-    def select_data(self):
-        data_need = self.global_data_system.select_item();
-        if not data_need.check_origin(self.vehicle.get_id()):
+    def select_data(self, local=False, decayed=False):
+        if local:
+            data_need = self.global_data_system.select_data_local(self.network_access_node.get_position());
+        else:
+            if decayed:
+                data_need = self.global_data_system.select_global_decayed_data();
+            else:
+                data_need = self.global_data_system.select_data_global();
+        if not data_need.check_origin(self.network_access_node.get_id()):
             data_size = np.random.randint(0, 4);
             if data_size == 0:
                 data_size = data_need.get_data_size(data_type.LOW);
@@ -226,21 +249,24 @@ class vehicle_data_system:
             else:
                 data_size = data_need.get_data_size(data_type.HUG);
             request = {"data_id":data_need.data_id, "data_size":data_size};
-            self.vehicle.request_data("request:" + self.vehicle.get_id() + ":" + str(self.current_time), self.status_size, request, data_need.origin, self.task_callback);
+            self.network_access_node.request_data("request:" + self.network_access_node.get_id() + ":" + str(self.current_time), self.status_size, request, data_need.origin, self.task_callback);
 
     #Note we send status messages once every second
     def update(self):
-        new_data_id = "data_id:" + self.vehicle.get_id() + "," + str(self.current_time);
-        self.data_item_dict[new_data_id] = vehicular_data(self.vehicle.get_id(), new_data_id, self.vehicle.get_location());
+        new_data_id = "data_id:" + self.network_access_node.get_id() + "," + str(self.current_time);
+        self.data_item_dict[new_data_id] = vehicular_data(self.network_access_node.get_id(), new_data_id, self.network_access_node.get_location());
         self.global_data_system.add_data_item(self.data_item_dict[new_data_id]);
         if math.ceil(self.current_time) == self.current_time:
             #Time to send a status message ... we can directly send data as such without need for scheduler ... 
-            self.vehicle.upload_data("status:" + self.vehicle.get_id() + ":" + str(self.current_time), self.status_size, self.vehicle.get_local_rsu_id(), self.task_callback);
+            deadline = np.random.uniform(self.deadline_range[0], self.deadline_range[1]);
+            local_rsu_id = self.network_access_node.get_local_access_node_id();
+            if local_rsu_id != None:
+                self.network_access_node.upload_data("status:" + self.network_access_node.get_id() + ":" + str(self.current_time), self.status_size, local_rsu_id, self.task_callback, deadline);
         likelihood = np.random.ranf();
         if likelihood <= self.local_data_rate:
-            self.select_data();
+            self.select_data(True);
         likelihood = np.random.ranf();
         if likelihood <= self.global_data_rate:
-            self.select_data();
+            self.select_data(False);
         self.current_time += self.time_decay;
 

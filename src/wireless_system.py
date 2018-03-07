@@ -1,6 +1,6 @@
 #Complete Simulation System ... 
 from enum import Enum
-from wireless_simulation import map_system, gaussian_placement
+from map_system import map_system, gaussian_placement
 from message_system import messaging_system
 import numpy as np 
 import math
@@ -9,42 +9,6 @@ class node_type(Enum):
     VEHICLE = 0
     RSU = 1
     LTE = 2
-
-#Kind of an interface class for what we need ... 
-class network_access_point:
-    def __init__(self, node_id, position, upload_speed=1000, download_speed=1000):
-        self.node_id = node_id;
-        self.upload_speed = upload_speed;
-        self.download_speed = download_speed;
-        self.position = position;
-
-    def set_speeds(self, upload_speed, download_speed):
-        self.upload_speed = upload_speed;
-        self.download_speed = download_speed;
-
-    def get_position(self):
-        return self.position;
-
-    def get_id(self):
-        return self.node_id;
-
-    def update(self):
-        print("ERROR")
-        quit(1);
-
-    #Immediately send data
-    def __upload_data_now__(self, packet_list):
-        print("TBD")
-
-    def upload_data(self, packet_list):
-        #Not Implemented in this class, should be implemented in child class
-        print("ERROR")
-        quit(1);
-
-    def download_data(self, packet):
-        #Not Implemented in this class, should be implemented in child class
-        print("ERROR")
-        quit(1);
 
 class wireless_system:
     def __init__(self, traci, map_size=(32000, 32000), time_decay=0.1, simulation_time=1200, random_seed=0):
@@ -70,6 +34,14 @@ class wireless_system:
         self.vehicle_dict = {};
         self.fixed_node_dict = {};
         self.message_system = messaging_system(self.traci, self, self.current_time, time_decay=self.time_decay);
+
+    def get_local_access_point(self, location):
+        map_points = self.map_system.get_access_points_in_range(location);
+        if len(map_points) == 0:
+            return None:
+        else:
+            return map_points[0][1];
+
 
     def upload_data(self, packet):
         self.message_system.upload_data(packet);

@@ -100,24 +100,3 @@ def gaussian_placement(num_access_node, map_size, access_type, wireless_range):
         y_pos = np.clip(np.random.normal(loc=map_size[1]/2, scale=map_size[1]/5), 0, map_size[1]);
         access_node_list.append(access_node(str(access_type) + ":" + str(i), [x_pos, y_pos], access_type, wireless_range))
     return access_node_list
-
-class wireless_simulation:
-    #This class will be for the overall simulation where we build from top down
-    #In this class, it contains the network system over a region. 
-    
-    def __init__(self, num_rsu, num_lte, map_size=(32000, 32000), random_seed=0, LTE_place=gaussian_placement, RSU_place=gaussian_placement, LTE_range=5000, RSU_range=1000):
-        #Hence, given a set of rsu and LTE, we will attempt to place the towers in a method. 
-        self.num_rsu = num_rsu;
-        self.num_lte = num_lte;
-        self.map_size = map_size;
-        np.random.seed(random_seed);
-        self.map_system = map_system(levels=3, drop=5);
-        
-        self.rsu_list = RSU_place(num_rsu, map_size, node_type.RSU, RSU_range);
-        for i in range(num_rsu):
-            self.map_system.add_access_point(self.rsu_list[i]);
-    
-        self.lte_list = LTE_place(num_lte, map_size, node_type.LTE, LTE_range);
-        for i in range(num_lte):
-            self.map_system.add_access_point(self.lte_list[i]);
-        self.map_system.visualize_coverage_map((800, 800));

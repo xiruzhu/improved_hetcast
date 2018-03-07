@@ -3,7 +3,6 @@
 from packet_system import packet_system
 from data_system import complete_data_system
 from wireless_system import wireless_system
-from vehicle import vehicle
 import math
 
 class message_queue:
