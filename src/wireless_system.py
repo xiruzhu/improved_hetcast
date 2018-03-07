@@ -38,10 +38,9 @@ class wireless_system:
     def get_local_access_point(self, location):
         map_points = self.map_system.get_access_points_in_range(location);
         if len(map_points) == 0:
-            return None:
+            return None;
         else:
             return map_points[0][1];
-
 
     def upload_data(self, packet):
         self.message_system.upload_data(packet);
