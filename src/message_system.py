@@ -72,19 +72,7 @@ class messaging_system:
         else:
             return None;
 
-    def transfer_to_packet_system(self, packet):
-        #First we must find the packet system for the receiver
-        if packet.receiver_id in self.fixed_packet_systems:
-            system = self.fixed_packet_systems[packet.receiver_id];
-        elif packet.receiver_id in self.vehicle_packet_systems:
-            system = self.vehicle_packet_systems[packet.receiver_id];
-        else:
-            #Cannot find the packet system and therefore it fails
-            return;
-        #Otherwise, just send the message ... 
-        system.receive_message(packet);        
-
-    def upload_data(self, packet):
+    def get_message_queue(self, receiver_id):
         #First we must find the packet system for the receiver
         if packet.receiver_id in self.fixed_message_queues:
             queue = self.fixed_message_queues[packet.receiver_id];
@@ -92,9 +80,33 @@ class messaging_system:
             queue = self.vehicle_message_queues[packet.receiver_id];
         else:
             #Cannot find the packet system and therefore it fails
+            return None;
+
+    def upload_packet(self, packet):
+        queue = self.get_message_queue(packet.receiver_id);
+        if queue == None:
             return;
-        #Otherwise, just send the message ... 
         queue.add_message(packet);  
+
+    def upload_data(self, sender_id, task_id, data_size, receiver_id, callback_function, deadline):
+        system = self.get_packet_system(sender_id);
+        if system == None:
+            return;
+        request_packet = system.get_request_packet(task_id, data_size, receiver_id, callback_function, deadline);
+        system.send_packet(request_packet);
+
+    def upload_request(self, sender_id, task_id, data_size, request, receiver_id, callback_function):
+        system = self.get_packet_system(sender_id);
+        if system == None:
+            return;
+        request_packet = system.get_request_packet(task_id, data_size, request, receiver_id, callback_function);
+        system.send_packet(request_packet);
+
+    def transfer_to_packet_system(self, packet):
+        system = self.get_packet_system(packet.receiver_id);
+        if system == None:
+            return;
+        system.receive_message(packet);        
 
     def update_vehicle_message_queue(self):
         new_vehicle_dict = {};

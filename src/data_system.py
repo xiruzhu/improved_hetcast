@@ -248,7 +248,7 @@ class vehicle_data_system:
             else:
                 data_size = data_need.get_data_size(data_type.HUG);
             request = {"data_id":data_need.data_id, "data_size":data_size};
-            self.network_access_node.request_data("request:" + self.network_access_node.get_id() + ":" + str(self.current_time), self.status_size, request, data_need.origin, self.task_callback);
+            self.network_access_node.request_data(self.network_access_node.get_id(), "request:" + self.network_access_node.get_id() + ":" + str(self.current_time), self.status_size, request, data_need.origin, self.task_callback);
 
     #Note we send status messages once every second
     def update(self):

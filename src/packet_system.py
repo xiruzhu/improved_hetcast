@@ -104,8 +104,10 @@ class packet_system:
         self.tasks_queue[task_id] = new_task;
 
     #Uploads data ... 
-    def upload_data(self, task_id, data_size, receiver_id, callback_function):
-        new_task = task(task_id, data_size, self.packet_size, callback_function, self.deadline + self.current_time);
+    def upload_data(self, task_id, data_size, receiver_id, callback_function, deadline=None):
+        if deadline == None:
+            deadline = self.deadline;
+        new_task = task(task_id, data_size, self.packet_size, callback_function, deadline + self.current_time);
         for i in range(new_task.num_packets):
             new_packet = self.create_data_packet(receiver_id, task_id);
             self.send_packet(new_packet);
