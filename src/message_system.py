@@ -2,19 +2,18 @@
 #Here we define network of nodes
 from packet_system import packet_system
 from data_system import complete_data_system
-from wireless_system import wireless_system
 import math
 
 class message_queue:
     def __init__(self, current_time, time_decay, message_system, message_delay=[0.2, 0.2]):
         self.current_time = current_time;
         self.time_decay = time_decay;
-        self.message_delay = max(0, message_delay);
+        self.message_delay = message_delay;
         self.message_system = message_system;
         self.message_queue = {};
 
     def add_message(self, packet):
-        delay = np.random.normal(self.message_delay[0], self.message_delay[1]);
+        delay = abs(np.random.normal(self.message_delay[0], self.message_delay[1]));
         packet.delay_value = delay;
         new_id = packet.sender_id + ":" + str(packet.seq_num);
         self.message_queue[new_id] = packet;
@@ -108,8 +107,9 @@ class messaging_system:
         system.receive_message(packet);        
 
     def update_vehicle_message_queue(self):
+        updated_vehicle_list = self.wireless_system.get_vehicle_id_list();
         new_vehicle_dict = {};
-        for vehicle_id in self.updated_vehicle_list:
+        for vehicle_id in updated_vehicle_list:
             if vehicle_id in self.vehicle_message_queues:
                 new_vehicle_dict[vehicle_id] = self.vehicle_message_queues[vehicle_id];
             else:
@@ -117,8 +117,9 @@ class messaging_system:
         self.vehicle_message_queues = new_vehicle_dict;
 
     def update_vehicle_packet_system(self):
+        updated_vehicle_list = self.wireless_system.get_vehicle_id_list();
         new_vehicle_dict = {};
-        for vehicle_id in self.updated_vehicle_list:
+        for vehicle_id in updated_vehicle_list:
             if vehicle_id in self.vehicle_packet_systems:
                 new_vehicle_dict[vehicle_id] = self.vehicle_packet_systems[vehicle_id];
             else:
@@ -126,7 +127,6 @@ class messaging_system:
         self.vehicle_packet_systems = new_vehicle_dict;
 
     def update(self):
-        self.updated_vehicle_list = self.traci.vehicle.getIDList();
         if math.ceil(self.current_time) == self.current_time:
             self.update_vehicle_message_queue();
             self.update_vehicle_packet_system();

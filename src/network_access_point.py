@@ -1,27 +1,27 @@
 #Definines the vehicle class
-from data_system import vehicle_data_system
+from data_system import vehicle_data_system, fixed_data_system
 from message_system import message_queue
 from access_node import access_node
 import math
 
 #Kind of an interface class for what we need ... 
 class network_access_point:
-    def __init__(self, node_id, position, packet_system, current_time, time_decay=0.1, upload_speed=1000, download_speed=1000):
+    def __init__(self, node_id, position, data_system, traci, current_time, packet_size=2000, time_decay=0.1, upload_speed=100, download_speed=100):
         self.node_id = node_id;
         self.upload_speed = upload_speed;
         self.download_speed = download_speed;
         self.position = position;
-        self.packet_system = packet_system;
         self.current_time = current_time;
         self.time_decay = time_decay;
+        self.packet_size = packet_size;
 
     def set_speeds(self, upload_speed, download_speed):
         self.upload_speed = upload_speed;
         self.download_speed = download_speed;
 
     def print_network_speeds_per_second(self):
-        up_speed = self.upload_speed/self.time_decay * self.packet_system.packet_size;
-        down_speed = self.download_speed/self.time_decay * self.packet_system.packet_size;
+        up_speed = self.upload_speed/self.time_decay * self.packet_size;
+        down_speed = self.download_speed/self.time_decay * self.packet_size;
         print("Upload Speed: " + str(up_speed) + ", Download Speed: " + str(down_speed));
 
     def get_position(self):
@@ -52,10 +52,10 @@ class network_access_point:
         quit(1);
 
 #Can be either rsu or lte
-class fixed_data_system(network_access_point):
+class fixed_network_node(network_access_point):
     def __init__(self, access_node, wireless_system, data_system, traci, current_time, packet_size=2000, time_decay=0.1, upload_speed=100, download_speed=100):
-        self.node_id = access_node.access_id;
-        self.position = access_node.location;
+        self.node_id = access_node.get_id();
+        self.position = access_node.get_location();
 
         self.traci = traci;
         self.time_decay = time_decay;
@@ -63,10 +63,12 @@ class fixed_data_system(network_access_point):
         self.current_time = current_time;
         self.upload_speed = upload_speed;
         self.download_speed = download_speed;
-        self.data_system = data_system
+        self.data_system = fixed_data_system(self, data_system, current_time);
         self.access_node = access_node;
+        self.packet_size = packet_size;
 
     def update(self):
+        self.data_system.update();
         self.current_time += self.time_decay;
 
     def advanced_upload_scheduling(self, sender_id, task_id, data_size, receiver_id, callback_function, deadline):
@@ -84,18 +86,18 @@ class fixed_data_system(network_access_point):
     def request_data(self, sender_id, task_id, data_size, request, receiver_id, callback_function):
         self.wireless_system.upload_request_task(sender_id, task_id, data_size, request, receiver_id, callback_function);
 
-class vehicle(network_access_point):
-    def __init__(self, vehicle_id, wireless_system, packet_system, traci, current_time, time_decay=0.1, upload_speed=100, download_speed=100):
+class vehicle_network_node(network_access_point):
+    def __init__(self, vehicle_id, wireless_system, data_system, traci, current_time, packet_size=2000, time_decay=0.1, upload_speed=100, download_speed=100):
         self.node_id = vehicle_id;
         self.traci = traci;
         self.time_decay = time_decay;
         self.wireless_system = wireless_system;
-        self.packet_system = packet_system;
         self.current_time = current_time;
         self.upload_speed = upload_speed;
         self.download_speed = download_speed;
-        self.vehicle_data_system = vehicle_data_system(self, wireless_system.complete_data_system, current_time)
+        self.data_system = vehicle_data_system(self, data_system, current_time)
         self.location = traci.vehicle.getPosition(self.get_id());
+        self.packet_size = packet_size;
 
     def get_local_access_node_id(self):
         return self.wireless_system.get_local_access_node_id(self.get_position());
@@ -103,8 +105,9 @@ class vehicle(network_access_point):
     def update(self):
         if math.ceil(self.current_time) == self.current_time:
             self.location = self.traci.vehicle.getPosition(self.get_id());
-        self.vehicle_data_system.update();
+        self.data_system.update();
         self.current_time += self.time_decay;
+        print("Time: ", self.current_time)
 
     def advanced_upload_scheduling(self, sender_id, task_id, data_size, receiver_id, callback_function, deadline):
         print("Not yet implemented");

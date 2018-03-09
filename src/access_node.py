@@ -22,6 +22,12 @@ class access_node:
         self.interference_error = self.linear_collision_error;
         self.error_rate = 0;
 
+    def get_location(self):
+        return self.position;
+
+    def get_id(self):
+        return self.access_id;
+
     def linear_distance_error(self, distance, max_error=0.3):
         return max_error * (distance/self.wireless_radius)
 

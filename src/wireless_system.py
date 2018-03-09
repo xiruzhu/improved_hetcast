@@ -2,9 +2,10 @@
 from enum import Enum
 from map_system import map_system, gaussian_placement
 from message_system import messaging_system
+from data_system import complete_data_system
 import numpy as np 
 import math
-from network_access_point import fixed_data_system, vehicle_data_system
+from network_access_point import fixed_network_node, vehicle_network_node
 
 class node_type(Enum):
     VEHICLE = 0
@@ -20,12 +21,12 @@ class wireless_system:
 
         #seed the random seed to constant to prevent too much randomness
         np.random.seed(random_seed);
-
         #skip initial simulation time 
         for i in range(simulation_time):
             self.traci.simulationStep();
         self.current_time = simulation_time;
-        
+        self.updated_vehicle_id_list = self.traci.vehicle.getIDList();
+
         #Initialize the map system ... 
         self.map_system = map_system(levels=3, drop=5);
         self.add_lte();
@@ -35,14 +36,18 @@ class wireless_system:
         self.vehicle_dict = {};
         self.fixed_node_dict = {};
         self.message_system = messaging_system(self.traci, self, self.current_time, time_decay=self.time_decay);
+        self.complete_data_system = complete_data_system(self.current_time, map_size);
 
-        self.fixed_data_system = {};
+        self.fixed_network_access = {};
         for access_node in self.rsu_list:
-            self.fixed_data_system[access_node.access_id] = fixed_data_system(self.rsu_list[access_node], self, );
-        
+            self.fixed_network_access[access_node.get_id()] = fixed_network_node(access_node, self, self.message_system, self.traci, self.current_time);
         for access_node in self.lte_list:
-            self.fixed_data_system[access_node.access_id] = fixed_data_system(self.current_time, time_decay, self);
-        
+            self.fixed_network_access[access_node.get_id()] = fixed_network_node(access_node, self, self.message_system, self.traci, self.current_time);
+        self.vehicle_network_access = {};
+        self.update();
+
+    def get_vehicle_id_list(self):
+        return self.updated_vehicle_id_list;
 
     def get_local_access_point(self, location):
         map_points = self.map_system.get_access_points_in_range(location);
@@ -64,27 +69,26 @@ class wireless_system:
         self.lte_list = lte_placement(num_lte, self.map_size, node_type.LTE, lte_range);
         for i in range(num_lte):
             self.map_system.add_access_point(self.lte_list[i]);
-            self.fixed_node_dict[self.lte_list[i].access_id] = None;
 
     def add_rsu(self, num_rsu=1000, rsu_range=1000, rsu_placement=gaussian_placement):
         self.rsu_list = rsu_placement(num_rsu, self.map_size, node_type.RSU, rsu_range);
         for i in range(num_rsu):
             self.map_system.add_access_point(self.rsu_list[i]);
-            self.fixed_node_dict[self.rsu_list[i].access_id] = None;
 
     def update_vehicle_dict(self):
         new_vehicle_dict = {};
-        for vehicle_id in self.updated_vehicle_list:
+        for vehicle_id in self.updated_vehicle_id_list:
             if vehicle_id in self.vehicle_dict:
                 new_vehicle_dict[vehicle_id] = self.vehicle_dict[vehicle_id];
             else:
-                new_vehicle_dict[vehicle_id] = None;
+                new_vehicle_dict[vehicle_id] = vehicle_network_node(vehicle_id, self, self.complete_data_system, self.traci, self.current_time);
         self.vehicle_dict = new_vehicle_dict;
         self.current_time += self.time_decay;
 
     def update(self):
-        self.updated_vehicle_list = self.traci.vehicle.getIDList();
         if math.ceil(self.current_time) == self.current_time:
-            self.update_vehicle_dict();
+            self.updated_vehicle_id_list = self.traci.vehicle.getIDList();
+        self.update_vehicle_dict();
         self.message_system.update();
         self.current_time += self.time_decay;
+

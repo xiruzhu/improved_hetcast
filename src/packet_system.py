@@ -75,6 +75,7 @@ class packet_system:
         self.send_queue = [];
         self.ack_wait_queue = {};
         self.log_file = log_dir + system_id;
+        print(self.log_file)
         log_file = open(self.log_file, "w");
         log_file.close();
         self.tasks_queue = {};

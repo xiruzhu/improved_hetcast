@@ -177,18 +177,6 @@ class complete_data_system:
     def select_global_decayed_data(self):
         return self.global_decay_system.select_item();
 
-class fixed_data_system(vehicular_data):
-    #Note we send status messages once every second
-    def update(self):
-        likelihood = np.random.ranf();
-        if likelihood <= self.local_data_rate:
-            self.select_data();
-        likelihood = np.random.ranf();
-        if likelihood <= self.global_data_rate:
-            self.select_data(local=False, decayed=True);
-        self.current_time += self.time_decay;
-
-
 #This class deals with how each vehicle generates data ... 
 class vehicle_data_system:
     #Each vehicle must generate data
@@ -269,3 +257,24 @@ class vehicle_data_system:
             self.select_data(False);
         self.current_time += self.time_decay;
 
+class fixed_data_system(vehicle_data_system):
+    def __init__(self, network_access_node, global_data_system, current_time, global_data_rate=0, local_data_rate=2, time_decay=0.1, data_request_rate=1, status_size=1000, deadline_range=[5, 200]):
+        self.current_time = current_time;
+        self.network_access_node = network_access_node;
+        self.data_item_dict = {};
+        self.global_data_system = global_data_system;
+        self.status_size = status_size;
+        self.failures = 0;
+        self.success = 0;
+        self.deadline_range = deadline_range;
+        
+        self.global_data_rate = global_data_rate * time_decay;
+        self.local_data_rate = local_data_rate * time_decay;
+        
+        self.time_decay = time_decay;
+    #Note we send status messages once every second
+    def update(self):
+        likelihood = np.random.ranf();
+        if likelihood <= self.local_data_rate:
+            self.select_data();
+        self.current_time += self.time_decay;

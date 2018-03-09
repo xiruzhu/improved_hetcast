@@ -34,7 +34,7 @@ class map_system:
                 if access_point.in_range_of_rect(x_new_range, y_new_range):
                     #print(i, j, x_new_range, y_new_range);
                     if levels == 1:
-                        access_dict[str(i) + ":" + str(j)][access_point.id] = access_point;
+                        access_dict[str(i) + ":" + str(j)][access_point.get_id()] = access_point;
                     else:
                         self.add_access_resursive(access_point, x_new_range, y_new_range, access_dict[str(i) + ":" + str(j)], levels - 1)
                     
@@ -98,5 +98,9 @@ def gaussian_placement(num_access_node, map_size, access_type, wireless_range):
     for i in range(num_access_node):
         x_pos = np.clip(np.random.normal(loc=map_size[0]/2, scale=map_size[0]/5), 0, map_size[0]);
         y_pos = np.clip(np.random.normal(loc=map_size[1]/2, scale=map_size[1]/5), 0, map_size[1]);
-        access_node_list.append(access_node(str(access_type) + ":" + str(i), [x_pos, y_pos], access_type, wireless_range))
+        if access_type == node_type.RSU:
+            access_id = "RSU";
+        else:
+            access_id = "LTE";
+        access_node_list.append(access_node("access_node_" +  access_id + "_" + str(i), [x_pos, y_pos], access_type, wireless_range))
     return access_node_list
