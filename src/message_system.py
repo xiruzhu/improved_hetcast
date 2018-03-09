@@ -60,7 +60,6 @@ class messaging_system:
             else:
                 self.fixed_packet_systems[key] = packet_system(key, wireless_system, self, time_decay=time_decay, up_speed=rsu_upload, down_speed=rsu_down);
         self.vehicle_packet_systems = {};
-
         #Update everything ... 
         self.update();
 
@@ -74,28 +73,28 @@ class messaging_system:
 
     def get_message_queue(self, receiver_id):
         #First we must find the packet system for the receiver
-        if packet.receiver_id in self.fixed_message_queues:
-            queue = self.fixed_message_queues[packet.receiver_id];
-        elif packet.receiver_id in self.vehicle_message_queues:
-            queue = self.vehicle_message_queues[packet.receiver_id];
+        if receiver_id in self.fixed_message_queues:
+            return self.fixed_message_queues[receiver_id];
+        elif receiver_id in self.vehicle_message_queues:
+            return self.vehicle_message_queues[receiver_id];
         else:
             #Cannot find the packet system and therefore it fails
             return None;
 
-    def upload_packet(self, packet):
+    def upload_data(self, packet):
         queue = self.get_message_queue(packet.receiver_id);
         if queue == None:
             return;
         queue.add_message(packet);  
 
-    def upload_data(self, sender_id, task_id, data_size, receiver_id, callback_function, deadline):
+    def upload_data_packet(self, sender_id, task_id, data_size, receiver_id, callback_function, deadline):
         system = self.get_packet_system(sender_id);
         if system == None:
             return;
         request_packet = system.get_request_packet(task_id, data_size, receiver_id, callback_function, deadline);
         system.send_packet(request_packet);
 
-    def upload_request(self, sender_id, task_id, data_size, request, receiver_id, callback_function):
+    def upload_request_packet(self, sender_id, task_id, data_size, request, receiver_id, callback_function):
         system = self.get_packet_system(sender_id);
         if system == None:
             return;

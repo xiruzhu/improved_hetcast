@@ -52,10 +52,10 @@ class wireless_system:
             return map_points[0][1];
 
     def upload_data_task(self, sender_id, task_id, data_size, receiver_id, callback_function, deadline):
-        self.message_system.upload_data(sender_id, task_id, data_size, receiver_id, callback_function, deadline);
+        self.message_system.upload_data_packet(sender_id, task_id, data_size, receiver_id, callback_function, deadline);
 
     def upload_data_request(self, sender_id, task_id, data_size, request, receiver_id, callback_function):
-        self.message_system.upload_data(sender_id, task_id, data_size, request, receiver_id, callback_function);
+        self.message_system.upload_request_packet(sender_id, task_id, data_size, request, receiver_id, callback_function);
 
     def handle_data_request(self, packet):
         print("TO BE IMPLEMENTED")
