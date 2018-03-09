@@ -27,7 +27,7 @@ class network_access_point:
     def get_position(self):
         return self.position;
 
-    def get_time(self)
+    def get_time(self):
         return self.current_time;
 
     def get_id(self):
@@ -52,7 +52,7 @@ class network_access_point:
         quit(1);
 
 #Can be either rsu or lte
-class fixed_point(network_access_point):
+class fixed_data_system(network_access_point):
     def __init__(self, access_node, wireless_system, packet_system, data_system, traci, current_time, time_decay=0.1, upload_speed=100, download_speed=100):
         self.node_id = access_node.access_id;
         self.position = access_node.location;
@@ -98,14 +98,14 @@ class vehicle(network_access_point):
         self.upload_speed = upload_speed;
         self.download_speed = download_speed;
         self.vehicle_data_system = vehicle_data_system(self, wireless_system.complete_data_system, current_time)
-        self.location = traci.vehicle.getPosition(self.vehicle_id);
+        self.location = traci.vehicle.getPosition(self.get_id());
 
     def get_local_access_node_id(self):
         return self.wireless_system.get_local_access_node_id(self.get_position());
 
     def update(self):
         if math.ceil(self.current_time) == self.current_time:
-            self.location = self.traci.vehicle.getPosition(self.vehicle_id);
+            self.location = self.traci.vehicle.getPosition(self.get_id());
         self.vehicle_data_system.update();
         self.current_time += self.time_decay;
 

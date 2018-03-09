@@ -64,6 +64,14 @@ class messaging_system:
         #Update everything ... 
         self.update();
 
+    def get_packet_system(self, access_node_id):
+        if access_node_id in self.fixed_packet_systems:
+            return self.fixed_packet_systems[access_node_id];
+        elif access_node_id in self.vehicle_packet_systems:
+            return self.vehicle_packet_systems[access_node_id];
+        else:
+            return None;
+
     def transfer_to_packet_system(self, packet):
         #First we must find the packet system for the receiver
         if packet.receiver_id in self.fixed_packet_systems:

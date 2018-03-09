@@ -200,7 +200,6 @@ class vehicle_data_system:
         self.current_time = current_time;
         self.network_access_node = network_access_node;
         self.data_item_dict = {};
-        self.message_system = message_system;
         self.global_data_system = global_data_system;
         self.status_size = status_size;
         self.failures = 0;

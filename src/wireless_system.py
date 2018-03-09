@@ -4,6 +4,7 @@ from map_system import map_system, gaussian_placement
 from message_system import messaging_system
 import numpy as np 
 import math
+from network_access_point import fixed_data_system, vehicle_data_system
 
 class node_type(Enum):
     VEHICLE = 0
@@ -34,6 +35,14 @@ class wireless_system:
         self.vehicle_dict = {};
         self.fixed_node_dict = {};
         self.message_system = messaging_system(self.traci, self, self.current_time, time_decay=self.time_decay);
+
+        self.fixed_data_system = {};
+        for access_node in self.rsu_list:
+            self.fixed_data_system[access_node.access_id] = fixed_data_system(self.rsu_list[access_node], self, );
+        
+        for access_node in self.lte_list:
+            self.fixed_data_system[access_node.access_id] = fixed_data_system(self.current_time, time_decay, self);
+        
 
     def get_local_access_point(self, location):
         map_points = self.map_system.get_access_points_in_range(location);
