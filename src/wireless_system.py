@@ -40,9 +40,9 @@ class wireless_system:
 
         self.fixed_network_access = {};
         for access_node in self.rsu_list:
-            self.fixed_network_access[access_node.get_id()] = fixed_network_node(access_node, self, self.message_system, self.traci, self.current_time);
+            self.fixed_network_access[access_node.get_id()] = fixed_network_node(access_node, self, self.complete_data_system, self.traci, self.current_time);
         for access_node in self.lte_list:
-            self.fixed_network_access[access_node.get_id()] = fixed_network_node(access_node, self, self.message_system, self.traci, self.current_time);
+            self.fixed_network_access[access_node.get_id()] = fixed_network_node(access_node, self, self.complete_data_system, self.traci, self.current_time);
         self.vehicle_network_access = {};
         self.update();
 
@@ -75,20 +75,29 @@ class wireless_system:
         for i in range(num_rsu):
             self.map_system.add_access_point(self.rsu_list[i]);
 
+    def update_fixed_nodes(self):
+        for network_node in self.fixed_network_access:
+            self.fixed_network_access[network_node].update();
+
     def update_vehicle_dict(self):
         new_vehicle_dict = {};
         for vehicle_id in self.updated_vehicle_id_list:
             if vehicle_id in self.vehicle_dict:
                 new_vehicle_dict[vehicle_id] = self.vehicle_dict[vehicle_id];
+                new_vehicle_dict[vehicle_id].update();
             else:
                 new_vehicle_dict[vehicle_id] = vehicle_network_node(vehicle_id, self, self.complete_data_system, self.traci, self.current_time);
         self.vehicle_dict = new_vehicle_dict;
-        self.current_time += self.time_decay;
 
     def update(self):
         if math.ceil(self.current_time) == self.current_time:
             self.updated_vehicle_id_list = self.traci.vehicle.getIDList();
+        self.complete_data_system.update();
+        self.update_fixed_nodes();
         self.update_vehicle_dict();
         self.message_system.update();
-        self.current_time += self.time_decay;
 
+        if math.ceil(self.current_time) - self.current_time < self.time_decay:
+            self.traci.simulationStep();
+        self.current_time += self.time_decay;
+        print(self.current_time);    

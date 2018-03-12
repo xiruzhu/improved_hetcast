@@ -1,5 +1,6 @@
 #Packet Object ... 
 from enum import Enum
+from functools import total_ordering
 
 class task_outcome(Enum):
     ONGOING = 0
@@ -75,7 +76,6 @@ class packet_system:
         self.send_queue = [];
         self.ack_wait_queue = {};
         self.log_file = log_dir + system_id;
-        print(self.log_file)
         log_file = open(self.log_file, "w");
         log_file.close();
         self.tasks_queue = {};
@@ -132,14 +132,18 @@ class packet_system:
 
     def update(self):
         #First we clean up the system of completed tasks ... 
-        for task in self.tasks_queue:
-            if task.get_task_status() == task_outcome.FAILED or task.check_deadline() == False:
+        task_removed = [];
+        for task_id in self.tasks_queue:
+            task = self.tasks_queue[task_id];
+            if task.get_task_status() == task_outcome.FAILED or task.check_deadline(self.current_time) == False:
                 #Task failed .... 
-                failed_task = self.tasks_queue.pop(task);
-                failed_task.task_callback(failed_task);
+                task_removed.append(task_id);
+                task.task_callback(task);
             elif task.get_task_status() == task_outcome.SUCCESS:
-                success_task = self.tasks_queue.pop(task);
-                success_task.task_callback(success_task);
+                task_removed.append(task_id);
+                task.task_callback(task);
+        for task in task_removed:
+            self.tasks_queue.pop(task);
         #First we receive data ....
         for i in range(min(self.receive_speed, len(self.receive_queue))):
             received_data = self.receive_queue.pop(0);            

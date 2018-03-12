@@ -49,8 +49,8 @@ class map_system:
         access_dict = self.bucket_system;
         data_range = self.map_size;
         while levels >= 1:
-            i = (position[0]//(data_range[0]//self.drop));
-            j = (position[1]//(data_range[1]//self.drop));
+            i = int(position[0]//(data_range[0]//self.drop));
+            j = int(position[1]//(data_range[1]//self.drop));
             data_range = [data_range[0] // self.drop, data_range[1] // self.drop];
             position = [position[0] % data_range[0], position[1] % data_range[1]];
             access_dict = access_dict[str(i) + ":" + str(j)]
@@ -58,7 +58,7 @@ class map_system:
         distance_list = {};
         for wireless_node in access_dict:
             wireless_node = access_dict[wireless_node]
-            distance_list[wireless_node.id] = wireless_node.compute_distance(true_position);
+            distance_list[wireless_node.get_id()] = wireless_node.compute_distance(true_position);
         sorted_values = sorted(zip(distance_list.values(),distance_list.keys()))
         return sorted_values;
 
@@ -98,9 +98,6 @@ def gaussian_placement(num_access_node, map_size, access_type, wireless_range):
     for i in range(num_access_node):
         x_pos = np.clip(np.random.normal(loc=map_size[0]/2, scale=map_size[0]/5), 0, map_size[0]);
         y_pos = np.clip(np.random.normal(loc=map_size[1]/2, scale=map_size[1]/5), 0, map_size[1]);
-        if access_type == node_type.RSU:
-            access_id = "RSU";
-        else:
-            access_id = "LTE";
+        access_id = str(access_type).replace(".", "_");
         access_node_list.append(access_node("access_node_" +  access_id + "_" + str(i), [x_pos, y_pos], access_type, wireless_range))
     return access_node_list

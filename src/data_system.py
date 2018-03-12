@@ -104,7 +104,7 @@ class decaying_data_system:
             sorted_system = sorted(zip(self.current_rank_system.values(), self.current_rank_system.keys()))
             self.dist_freq = [];
             for item in sorted_system:
-                self.dist_freq.append(item[1]);
+                self.dist_freq.append(self.data_item_dict[item[1]]);
             self.item_added_flag = False;
         self.current_time += self.time_decay;   
              
@@ -135,7 +135,7 @@ class complete_data_system:
         self.global_data_system.update();
 
         #Create a final system which includes all data item without distance 
-        self.global_decay_system = decaying_data_system(current_time, [0, 0], 0, global_system=False);
+        self.global_decay_system = decaying_data_system(current_time, [0, 0], 0, global_system=True);
 
         #Local data system
         x_half = (map_size[0]/grid_size[0])/2;
@@ -144,18 +144,20 @@ class complete_data_system:
         for i in range(grid_size[0]):
             self.decay_system_mat.append([])
             for j in range(grid_size[1]):
-                self.decay_system_mat.append(decaying_data_system(current_time, [position[0] + x_half, position[1], y_half], max_dist, value_decay, time_decay));
+                self.decay_system_mat[i].append(decaying_data_system(current_time, [position[0] + x_half, position[1], y_half], max_dist, value_decay, time_decay));
                 position[1] += map_size[1]/grid_size[1];
             position[0] += map_size[0]/grid_size[0];
     
     def add_data_item(self, data_item):
-        for system in self.decay_system_mat:
-            system.add_data_item(data_item);
+        for mat_list in self.decay_system_mat:
+            for system in mat_list:
+                system.add_data_item(data_item);
         self.global_decay_system.add_data_item(data_item);
     
     def update(self):
-        for system in self.decay_system_mat:
-            system.update();
+        for mat_list in self.decay_system_mat:
+            for system in mat_list:
+                system.update();
         self.global_decay_system.update();
         self.current_time += self.time_decay;
 
@@ -167,8 +169,8 @@ class complete_data_system:
 
     def select_data_local(self, location):
         #Given a location, we find the appropriate cell ... 
-        i = location[0]//(self.map_size[0]/self.grid_size[0]);
-        j = location[1]//(self.map_size[1]/self.grid_size[1]);
+        i = int(location[0]//(self.map_size[0]/self.grid_size[0]));
+        j = int(location[1]//(self.map_size[1]/self.grid_size[1]));
         return self.decay_system_mat[i][j].select_item();
 
     def select_data_global(self):
@@ -209,7 +211,7 @@ class vehicle_data_system:
         requested_item = self.get_data(packet.request["data_id"]);
         data_size = packet.request["data_size"];     
         deadline = np.random.uniform(self.deadline_range[0], self.deadline_range[1]);
-        self.network_access_node.upload_data("data:" + self.network_access_node.get_id() + ":" + str(self.current_time), data_size, packet.sender_id, self.task_callback, deadline);
+        self.network_access_node.upload_data(self.network_access_node.get_id() ,"data:" + self.network_access_node.get_id() + ":" + str(self.current_time), data_size, packet.sender_id, self.task_callback, deadline);
 
     def task_callback(self, task):
         if task.outcome == task_outcome.SUCCESS:
@@ -219,12 +221,14 @@ class vehicle_data_system:
 
     def select_data(self, local=False, decayed=False):
         if local:
-            data_need = self.global_data_system.select_data_local(self.network_access_node.get_position());
+            data_need = self.global_data_system.select_data_local(self.network_access_node.get_location());
         else:
             if decayed:
                 data_need = self.global_data_system.select_global_decayed_data();
             else:
                 data_need = self.global_data_system.select_data_global();
+        if data_need is None:
+            return;
         if not data_need.check_origin(self.network_access_node.get_id()):
             data_size = np.random.randint(0, 4);
             if data_size == 0:
@@ -248,7 +252,7 @@ class vehicle_data_system:
             deadline = np.random.uniform(self.deadline_range[0], self.deadline_range[1]);
             local_rsu_id = self.network_access_node.get_local_access_node_id();
             if local_rsu_id != None:
-                self.network_access_node.upload_data("status:" + self.network_access_node.get_id() + ":" + str(self.current_time), self.status_size, local_rsu_id, self.task_callback, deadline);
+                self.network_access_node.upload_data(self.network_access_node.get_id(),"status:" + self.network_access_node.get_id() + ":" + str(self.current_time), self.status_size, local_rsu_id, self.task_callback, deadline);
         likelihood = np.random.ranf();
         if likelihood <= self.local_data_rate:
             self.select_data(True);

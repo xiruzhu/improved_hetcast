@@ -10,7 +10,7 @@ class network_access_point:
         self.node_id = node_id;
         self.upload_speed = upload_speed;
         self.download_speed = download_speed;
-        self.position = position;
+        self.location = position;
         self.current_time = current_time;
         self.time_decay = time_decay;
         self.packet_size = packet_size;
@@ -24,8 +24,8 @@ class network_access_point:
         down_speed = self.download_speed/self.time_decay * self.packet_size;
         print("Upload Speed: " + str(up_speed) + ", Download Speed: " + str(down_speed));
 
-    def get_position(self):
-        return self.position;
+    def get_location(self):
+        return self.location;
 
     def get_time(self):
         return self.current_time;
@@ -53,9 +53,9 @@ class network_access_point:
 
 #Can be either rsu or lte
 class fixed_network_node(network_access_point):
-    def __init__(self, access_node, wireless_system, data_system, traci, current_time, packet_size=2000, time_decay=0.1, upload_speed=100, download_speed=100):
+    def __init__(self, access_node, wireless_system, global_data_system, traci, current_time, packet_size=2000, time_decay=0.1, upload_speed=100, download_speed=100):
         self.node_id = access_node.get_id();
-        self.position = access_node.get_location();
+        self.location = access_node.get_location();
 
         self.traci = traci;
         self.time_decay = time_decay;
@@ -63,7 +63,7 @@ class fixed_network_node(network_access_point):
         self.current_time = current_time;
         self.upload_speed = upload_speed;
         self.download_speed = download_speed;
-        self.data_system = fixed_data_system(self, data_system, current_time);
+        self.data_system = fixed_data_system(self, global_data_system, current_time);
         self.access_node = access_node;
         self.packet_size = packet_size;
 
@@ -77,17 +77,17 @@ class fixed_network_node(network_access_point):
     def naive_upload_scheduling(self, sender_id, task_id, data_size, receiver_id, callback_function, deadline):
         #Given this is the naive algorithm, we schedule packets the moment we receive the requests
         #Thus, given this task, we can deliver before we split
-        self.wireless_system.upload_data_task(task_id, data_size, receiver_id, callback_function, deadline);
+        self.wireless_system.upload_data_task(sender_id, task_id, data_size, receiver_id, callback_function, deadline);
 
     def upload_data(self, sender_id, task_id, data_size, receiver_id, callback_function, deadline, scheduling_algorithm=naive_upload_scheduling):
-        scheduling_algorithm(sender_id, task_id, data_size, receiver_id, callback_function, deadline);
+        scheduling_algorithm(self, sender_id, task_id, data_size, receiver_id, callback_function, deadline);
 
     #Given size of request packet, this can be sent immediately rather than be scheduled
     def request_data(self, sender_id, task_id, data_size, request, receiver_id, callback_function):
-        self.wireless_system.upload_request_task(sender_id, task_id, data_size, request, receiver_id, callback_function);
+        self.wireless_system.upload_data_request(sender_id, task_id, data_size, request, receiver_id, callback_function);
 
 class vehicle_network_node(network_access_point):
-    def __init__(self, vehicle_id, wireless_system, data_system, traci, current_time, packet_size=2000, time_decay=0.1, upload_speed=100, download_speed=100):
+    def __init__(self, vehicle_id, wireless_system, global_data_system, traci, current_time, packet_size=2000, time_decay=0.1, upload_speed=100, download_speed=100):
         self.node_id = vehicle_id;
         self.traci = traci;
         self.time_decay = time_decay;
@@ -95,19 +95,18 @@ class vehicle_network_node(network_access_point):
         self.current_time = current_time;
         self.upload_speed = upload_speed;
         self.download_speed = download_speed;
-        self.data_system = vehicle_data_system(self, data_system, current_time)
+        self.data_system = vehicle_data_system(self, global_data_system, current_time)
         self.location = traci.vehicle.getPosition(self.get_id());
         self.packet_size = packet_size;
 
     def get_local_access_node_id(self):
-        return self.wireless_system.get_local_access_node_id(self.get_position());
+        return self.wireless_system.get_local_access_point(self.get_location());
 
     def update(self):
         if math.ceil(self.current_time) == self.current_time:
             self.location = self.traci.vehicle.getPosition(self.get_id());
         self.data_system.update();
         self.current_time += self.time_decay;
-        print("Time: ", self.current_time)
 
     def advanced_upload_scheduling(self, sender_id, task_id, data_size, receiver_id, callback_function, deadline):
         print("Not yet implemented");
@@ -115,11 +114,11 @@ class vehicle_network_node(network_access_point):
     def naive_upload_scheduling(self, sender_id, task_id, data_size, receiver_id, callback_function, deadline):
         #Given this is the naive algorithm, we schedule packets the moment we receive the requests
         #Thus, given this task, we can deliver before we split
-        self.wireless_system.upload_data_task(task_id, data_size, receiver_id, callback_function, deadline);
+        self.wireless_system.upload_data_task(sender_id, task_id, data_size, receiver_id, callback_function, deadline);
 
     def upload_data(self, sender_id, task_id, data_size, receiver_id, callback_function, deadline, scheduling_algorithm=naive_upload_scheduling):
-        scheduling_algorithm(sender_id, task_id, data_size, receiver_id, callback_function, deadline);
+        scheduling_algorithm(self, sender_id, task_id, data_size, receiver_id, callback_function, deadline);
 
     #Given size of request packet, this can be sent immediately rather than be scheduled
     def request_data(self, sender_id, task_id, data_size, request, receiver_id, callback_function):
-        self.wireless_system.upload_request_task(sender_id, task_id, data_size, request, receiver_id, callback_function);
+        self.wireless_system.upload_data_request(sender_id, task_id, data_size, request, receiver_id, callback_function);

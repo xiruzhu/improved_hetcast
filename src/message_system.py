@@ -3,6 +3,7 @@
 from packet_system import packet_system
 from data_system import complete_data_system
 import math
+import numpy as np
 
 class message_queue:
     def __init__(self, current_time, time_decay, message_system, message_delay=[0.2, 0.2]):
@@ -90,8 +91,9 @@ class messaging_system:
         system = self.get_packet_system(sender_id);
         if system == None:
             return;
-        request_packet = system.get_request_packet(task_id, data_size, receiver_id, callback_function, deadline);
-        system.send_packet(request_packet);
+        data_packet_list = system.get_upload_packets(task_id, data_size, receiver_id, callback_function, deadline);
+        for packet in data_packet_list:
+            system.send_packet(packet);
 
     def upload_request_packet(self, sender_id, task_id, data_size, request, receiver_id, callback_function):
         system = self.get_packet_system(sender_id);
@@ -113,7 +115,7 @@ class messaging_system:
             if vehicle_id in self.vehicle_message_queues:
                 new_vehicle_dict[vehicle_id] = self.vehicle_message_queues[vehicle_id];
             else:
-                new_vehicle_dict[vehicle_id] = message_queue(self, self.current_time, self.time_decay, self);
+                new_vehicle_dict[vehicle_id] = message_queue(self.current_time, self.time_decay, self);
         self.vehicle_message_queues = new_vehicle_dict;
 
     def update_vehicle_packet_system(self):
