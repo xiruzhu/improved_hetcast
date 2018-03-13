@@ -46,7 +46,8 @@ class messaging_system:
         self.fixed_message_queues = {};
         for access_node in self.wireless_system.rsu_list:
             self.fixed_message_queues[access_node.access_id] = message_queue(current_time, time_decay, self);
-        
+        self.fixed_message_queues["GLOBAL_DATA"] = message_queue(current_time, time_decay, self);
+
         for access_node in self.wireless_system.lte_list:
             self.fixed_message_queues[access_node.access_id] = message_queue(current_time, time_decay, self);
         
@@ -59,6 +60,7 @@ class messaging_system:
                 self.fixed_packet_systems[key] = packet_system(key, wireless_system, self, time_decay=time_decay, up_speed=lte_upload, down_speed=lte_down);
             else:
                 self.fixed_packet_systems[key] = packet_system(key, wireless_system, self, time_decay=time_decay, up_speed=rsu_upload, down_speed=rsu_down);
+        self.fixed_packet_systems["GLOBAL_DATA"] = packet_system("GLOBAL_DATA", wireless_system, self, time_decay=time_decay, up_speed=100000000, down_speed=100000000)
         self.vehicle_packet_systems = {};
         #Update everything ... 
         self.update();
@@ -92,6 +94,7 @@ class messaging_system:
         if system == None:
             return;
         data_packet_list = system.get_upload_packets(task_id, data_size, receiver_id, callback_function, deadline);
+        #print("Uploading Data", task_id);
         for packet in data_packet_list:
             system.send_packet(packet);
 
@@ -106,6 +109,7 @@ class messaging_system:
         system = self.get_packet_system(packet.receiver_id);
         if system == None:
             return;
+        print("Sending Data To Message System ", packet.task_id, "Receiver: ",packet.receiver_id)
         system.receive_message(packet);        
 
     def update_vehicle_message_queue(self):
@@ -129,12 +133,14 @@ class messaging_system:
         self.vehicle_packet_systems = new_vehicle_dict;
 
     def update(self):
-        if math.ceil(self.current_time) == self.current_time:
+        if math.ceil(self.current_time) - self.current_time < self.time_decay:
             self.update_vehicle_message_queue();
             self.update_vehicle_packet_system();
         for key in self.fixed_packet_systems:
+            self.fixed_message_queues[key].update();
             self.fixed_packet_systems[key].update();
         for key in self.vehicle_packet_systems:
+            self.vehicle_message_queues[key].update();
             self.vehicle_packet_systems[key].update();
         self.current_time += self.time_decay;
 

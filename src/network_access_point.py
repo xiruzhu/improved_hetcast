@@ -63,7 +63,7 @@ class fixed_network_node(network_access_point):
         self.current_time = current_time;
         self.upload_speed = upload_speed;
         self.download_speed = download_speed;
-        self.data_system = fixed_data_system(self, global_data_system, current_time);
+        self.data_system = fixed_data_system(self, global_data_system, current_time, time_decay=time_decay);
         self.access_node = access_node;
         self.packet_size = packet_size;
 
@@ -95,7 +95,7 @@ class vehicle_network_node(network_access_point):
         self.current_time = current_time;
         self.upload_speed = upload_speed;
         self.download_speed = download_speed;
-        self.data_system = vehicle_data_system(self, global_data_system, current_time)
+        self.data_system = vehicle_data_system(self, global_data_system, current_time, time_decay=time_decay)
         self.location = traci.vehicle.getPosition(self.get_id());
         self.packet_size = packet_size;
 
@@ -103,7 +103,7 @@ class vehicle_network_node(network_access_point):
         return self.wireless_system.get_local_access_point(self.get_location());
 
     def update(self):
-        if math.ceil(self.current_time) == self.current_time:
+        if math.ceil(self.current_time) - self.current_time < self.time_decay:
             self.location = self.traci.vehicle.getPosition(self.get_id());
         self.data_system.update();
         self.current_time += self.time_decay;

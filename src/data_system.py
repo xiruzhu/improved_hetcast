@@ -63,7 +63,7 @@ class vehicular_data:
 #There is a decay which reduces each data's ranking 
 #Data with negative or zero rank value are removed from the system 
 class decaying_data_system:
-    def __init__(self, current_time, location, max_dist, value_decay=0.3, time_decay=0.01, global_system=False):
+    def __init__(self, current_time, location, max_dist, value_decay=0.3, time_decay=0.1, global_system=False):
         self.current_time = current_time;
         self.current_rank_system = {};
         self.data_item_dict = {};
@@ -129,13 +129,13 @@ class complete_data_system:
 
         #Global Data System
         self.global_data_size = global_data_system_size;
-        self.global_data_system = decaying_data_system(current_time, [0, 0], 0, 0, time_decay, global_system=True);
+        self.global_data_system = decaying_data_system(current_time, [0, 0], 0, 0, time_decay=time_decay, global_system=True);
         for i in range(global_data_system_size):
             self.global_data_system.add_data_item(vehicular_data(GLOBAL_DATA, GLOBAL_DATA + ":" + str(i), [0, 0]));
         self.global_data_system.update();
 
         #Create a final system which includes all data item without distance 
-        self.global_decay_system = decaying_data_system(current_time, [0, 0], 0, global_system=True);
+        self.global_decay_system = decaying_data_system(current_time, [0, 0], 0, value_decay=value_decay, time_decay=time_decay, global_system=True);
 
         #Local data system
         x_half = (map_size[0]/grid_size[0])/2;
@@ -247,7 +247,7 @@ class vehicle_data_system:
         new_data_id = "data_id:" + self.network_access_node.get_id() + "," + str(self.current_time);
         self.data_item_dict[new_data_id] = vehicular_data(self.network_access_node.get_id(), new_data_id, self.network_access_node.get_location());
         self.global_data_system.add_data_item(self.data_item_dict[new_data_id]);
-        if math.ceil(self.current_time) == self.current_time:
+        if math.ceil(self.current_time) - self.current_time < self.time_decay:
             #Time to send a status message ... we can directly send data as such without need for scheduler ... 
             deadline = np.random.uniform(self.deadline_range[0], self.deadline_range[1]);
             local_rsu_id = self.network_access_node.get_local_access_node_id();
