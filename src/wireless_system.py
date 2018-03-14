@@ -5,7 +5,7 @@ from message_system import messaging_system
 from data_system import complete_data_system
 import numpy as np 
 import math
-from network_access_point import fixed_network_node, vehicle_network_node
+from network_access_point import fixed_network_node, vehicle_network_node, global_network_node
 
 class node_type(Enum):
     VEHICLE = 0
@@ -13,7 +13,7 @@ class node_type(Enum):
     LTE = 2
 
 class wireless_system:
-    def __init__(self, traci, map_size=(32000, 32000), time_decay=0.125, simulation_time=1200, random_seed=0):
+    def __init__(self, traci, map_size=(32000, 32000), time_decay=0.25, simulation_time=1200, random_seed=0):
         self.current_time = 0;
         self.map_size = map_size;
         self.time_decay = time_decay;
@@ -43,6 +43,7 @@ class wireless_system:
             self.fixed_network_access[access_node.get_id()] = fixed_network_node(access_node, self, self.complete_data_system, self.traci, self.current_time, time_decay=time_decay);
         for access_node in self.lte_list:
             self.fixed_network_access[access_node.get_id()] = fixed_network_node(access_node, self, self.complete_data_system, self.traci, self.current_time, time_decay=time_decay);
+        self.fixed_network_access["GLOBAL_DATA"] = global_network_node(self, self.complete_data_system, self.traci, self.current_time, time_decay=time_decay)
         self.vehicle_network_access = {};
         self.update();
 
@@ -63,7 +64,9 @@ class wireless_system:
         self.message_system.upload_request_packet(sender_id, task_id, data_size, request, receiver_id, callback_function);
 
     def handle_data_request(self, packet):
-        print("TO BE IMPLEMENTED")
+        #Thus, the packet already arrived and now must have arrived
+        print("What")
+
 
     def add_lte(self, num_lte=100, lte_range=5000, lte_placement=gaussian_placement):
         self.lte_list = lte_placement(num_lte, self.map_size, node_type.LTE, lte_range);
@@ -98,5 +101,4 @@ class wireless_system:
         self.update_fixed_nodes();
         self.update_vehicle_dict();
         self.message_system.update();
-
         self.current_time += self.time_decay;

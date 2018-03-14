@@ -13,7 +13,17 @@ class message_queue:
         self.message_system = message_system;
         self.message_queue = {};
 
+    def constant_interference_error(self, packet, max_error=0.05):
+        return max_error;
+
+    def constant_distance_error(self, packet, max_error=0.05):
+        return max_error;
+
     def add_message(self, packet):
+        error_rate = self.constant_interference_error(packet) + self.constant_distance_error(packet);
+        if np.random.uniform(0, 1) < error_rate:
+            #It failed ... 
+            return;
         delay = abs(np.random.normal(self.message_delay[0], self.message_delay[1]));
         packet.delay_value = delay;
         new_id = packet.sender_id + ":" + str(packet.seq_num);
@@ -46,8 +56,6 @@ class messaging_system:
         self.fixed_message_queues = {};
         for access_node in self.wireless_system.rsu_list:
             self.fixed_message_queues[access_node.access_id] = message_queue(current_time, time_decay, self);
-        self.fixed_message_queues["GLOBAL_DATA"] = message_queue(current_time, time_decay, self);
-
         for access_node in self.wireless_system.lte_list:
             self.fixed_message_queues[access_node.access_id] = message_queue(current_time, time_decay, self);
         
@@ -60,7 +68,6 @@ class messaging_system:
                 self.fixed_packet_systems[key] = packet_system(key, wireless_system, self, time_decay=time_decay, up_speed=lte_upload, down_speed=lte_down);
             else:
                 self.fixed_packet_systems[key] = packet_system(key, wireless_system, self, time_decay=time_decay, up_speed=rsu_upload, down_speed=rsu_down);
-        self.fixed_packet_systems["GLOBAL_DATA"] = packet_system("GLOBAL_DATA", wireless_system, self, time_decay=time_decay, up_speed=100000000, down_speed=100000000)
         self.vehicle_packet_systems = {};
         #Update everything ... 
         self.update();
@@ -109,8 +116,8 @@ class messaging_system:
         system = self.get_packet_system(packet.receiver_id);
         if system == None:
             return;
-        print("Sending Data To Message System ", packet.task_id, "Receiver: ",packet.receiver_id)
-        system.receive_message(packet);        
+        #print("Sending Data To Message System ", packet.task_id, "Receiver: ", packet.sender_id,packet.receiver_id)
+        system.receive_packet(packet);        
 
     def update_vehicle_message_queue(self):
         updated_vehicle_list = self.wireless_system.get_vehicle_id_list();

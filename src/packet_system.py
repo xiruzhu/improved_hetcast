@@ -59,7 +59,7 @@ class task:
         return True;
 
 class packet_system:
-    def __init__(self, system_id, wireless_system, message_system, log_dir="../logs/", time_decay=0.1, up_speed=1000, down_speed=1000,current_time=0, packet_size=2000, deadline=3):
+    def __init__(self, system_id, wireless_system, message_system, log_dir="../logs/", time_decay=0.1, up_speed=1000, down_speed=1000,current_time=0, packet_size=2000, deadline=4):
         self.packet_size=packet_size;
         self.sequence_number = 0;
         self.task_number = 0;
@@ -75,7 +75,7 @@ class packet_system:
         self.receive_queue = [];
         self.send_queue = [];
         self.ack_wait_queue = {};
-        self.log_file = log_dir + system_id;
+        self.log_file = log_dir + system_id + ".txt";
         log_file = open(self.log_file, "w");
         log_file.close();
         self.tasks_queue = {};
@@ -125,9 +125,9 @@ class packet_system:
             self.ack_wait_queue["receiver:" + packet.receiver_id + "|seq_number:" + str(packet.seq_num)] = packet;
         self.send_queue.append(packet);
 
-    def log_data(self, message_type, message):
+    def log_data(self, message_type, message, sender):
         log_file = open(self.log_file, "a+");
-        log_file.write(str(message_type) + "," + message + "\n")
+        log_file.write(str(message_type) + "," + message + ", " + sender + "\n")
         log_file.close();
 
     def update(self):
@@ -149,19 +149,21 @@ class packet_system:
             received_data = self.receive_queue.pop(0);            
             if received_data.data_type == message_type.DATA:
                 self.send_packet(self.create_ack_packet(received_data));
-                self.log_data(message_type.DATA, str(received_data.send_time) + "," + str(self.current_time))                    
-            elif received_data.request_data == message_type.REQ:
+                self.log_data(message_type.DATA, ", Send Time: "+ str(received_data.send_time) + ", Current Time: " + str(self.current_time), "Sender: " + received_data.sender_id)                    
+            elif received_data.data_type == message_type.REQ:
                 #....
                 self.send_packet(self.create_ack_packet(received_data));
                 self.wireless_system.handle_data_request(received_data);
-                self.log_data(message_type.REQ, str(received_data.send_time) + "," + str(self.current_time))                    
+                self.log_data(message_type.REQ, ", Send Time: "+ str(received_data.send_time) + ", Current Time: " + str(self.current_time), "Sender: " + received_data.sender_id)                    
             else:
                 #Received an acknowledgement ... 
                 ack_id = "receiver:" + received_data.sender_id + "|seq_number:" + str(received_data.seq_num)
                 if ack_id in self.ack_wait_queue:
                     original_packet = self.ack_wait_queue.pop(ack_id);
-                    self.log_data(message_type.ACK, str(original_packet.send_time) + "," + str(self.current_time))                    
-                    self.tasks_queue[original_packet.task_id].set_packet_ack(original_packet.seq_num ,True);
+                    if original_packet.task_id in self.tasks_queue:
+                        self.log_data(message_type.ACK, ", Send Time: "+ str(received_data.send_time) + ", Current Time: " + str(self.current_time), "Sender: " + received_data.sender_id)                    
+                        self.tasks_queue[original_packet.task_id].set_packet_ack(original_packet.seq_num, True);
+                    #Otherwise, the task has been cancelled ... 
                 #otherwise, it means an acknowledgement for the item has already been received ... 
         #Now after we handled all the received data we can handle 
         #We must handle the data with acknowledgement we have not received which is past the deadline ... 
