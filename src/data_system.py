@@ -291,21 +291,22 @@ class fixed_data_system(vehicle_data_system):
         self.current_time += self.time_decay;
 
 class global_data_system(vehicle_data_system):
-    def __init__(self, network_access_node, global_data_system, current_time, data_rate=50, time_decay=0.1, data_request_rate=1, deadline_range=[5, 200]):
+    def __init__(self, network_access_node, global_data_system, current_time, data_rate=50, time_decay=0.1, data_request_rate=25, status_size=1000, deadline_range=[5, 200]):
         self.current_time = current_time;
         self.network_access_node = network_access_node;
         self.data_item_dict = {};
         self.global_data_system = global_data_system;
         self.failures = 0;
         self.success = 0;
+        self.status_size = status_size;
         self.deadline_range = deadline_range;        
         self.time_decay = time_decay;    
-        self.global_data_rate = global_data_rate * time_decay;
+        self.data_rate = data_rate * time_decay;
     #Note we send status messages once every second
     
     def update(self):
         self.current_time += self.time_decay;
-        data_rate = self.global_data_rate;
+        data_rate = self.data_rate;
         while data_rate > 0:
             likelihood = np.random.ranf();
             if likelihood <= data_rate:

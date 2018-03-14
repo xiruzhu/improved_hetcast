@@ -90,34 +90,36 @@ class messaging_system:
             #Cannot find the packet system and therefore it fails
             return None;
 
-    def upload_data(self, packet):
+    def schedule_packet(self, packet):
+        self.wireless_system.schedule_packet(packet);
+
+    def upload_packet(self, packet):
         queue = self.get_message_queue(packet.receiver_id);
         if queue == None:
             return;
         queue.add_message(packet);  
 
-    def upload_data_packet(self, sender_id, task_id, data_size, receiver_id, callback_function, deadline):
+    def get_data_packets(self, sender_id, task_id, data_size, receiver_id, deadline):
         system = self.get_packet_system(sender_id);
         if system == None:
             return;
-        data_packet_list = system.get_upload_packets(task_id, data_size, receiver_id, callback_function, deadline);
-        #print("Uploading Data", task_id);
+        data_packet_list = system.get_upload_packets(task_id, data_size, sender_id, receiver_id, deadline);
         for packet in data_packet_list:
-            system.send_packet(packet);
+            self.schedule_packet(packet);
 
-    def upload_request_packet(self, sender_id, task_id, data_size, request, receiver_id, callback_function):
+    def get_request_packet(self, sender_id, task_id, data_size, request, receiver_id, deadline):
         system = self.get_packet_system(sender_id);
         if system == None:
             return;
-        request_packet = system.get_request_packet(task_id, data_size, request, receiver_id, callback_function);
-        system.send_packet(request_packet);
+        request_packet = system.get_request_packet(task_id, data_size, request, sender_id, receiver_id, deadline);
+        self.schedule_packet(request_packet);
 
     def transfer_to_packet_system(self, packet):
         system = self.get_packet_system(packet.receiver_id);
         if system == None:
             return;
         #print("Sending Data To Message System ", packet.task_id, "Receiver: ", packet.sender_id,packet.receiver_id)
-        system.receive_packet(packet);        
+        system.receive_packet(packet);     
 
     def update_vehicle_message_queue(self):
         updated_vehicle_list = self.wireless_system.get_vehicle_id_list();

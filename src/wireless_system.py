@@ -57,16 +57,21 @@ class wireless_system:
         else:
             return map_points[0][1];
 
-    def upload_data_task(self, sender_id, task_id, data_size, receiver_id, callback_function, deadline):
-        self.message_system.upload_data_packet(sender_id, task_id, data_size, receiver_id, callback_function, deadline);
+    def schedule_packet(self, packet):
+        print("TBD");    
 
-    def upload_data_request(self, sender_id, task_id, data_size, request, receiver_id, callback_function):
-        self.message_system.upload_request_packet(sender_id, task_id, data_size, request, receiver_id, callback_function);
+    def upload_data_task(self, sender_id, task_id, data_size, receiver_id, deadline):
+        self.message_system.get_data_packets(sender_id, task_id, data_size, receiver_id, deadline);
+
+    def upload_data_request(self, sender_id, task_id, data_size, request, receiver_id, deadline):
+        self.message_system.get_request_packet(sender_id, task_id, data_size, request, receiver_id, deadline);
+
+    def upload_packet(self, packet):
+        self.message_system.upload_packet(packet);
 
     def handle_data_request(self, packet):
         #Thus, the packet already arrived and now must have arrived
         print("What")
-
 
     def add_lte(self, num_lte=100, lte_range=5000, lte_placement=gaussian_placement):
         self.lte_list = lte_placement(num_lte, self.map_size, node_type.LTE, lte_range);
