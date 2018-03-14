@@ -12,7 +12,6 @@ class message_type(Enum):
     DATA = 1
     REQ = 2
 
-
 class packet:
     def __init__(self, sender_id, original_sender_id, receiver_id, final_receiver_id, task_id, send_time, seq_num, deadline, data_type=message_type.DATA, request=None):
         self.sender_id = sender_id;
@@ -25,6 +24,10 @@ class packet:
         self.request = request;
         self.task_id = task_id;
         self.deadline = deadline;
+    
+    def clone():
+        return packet(self.sender_id, self.original_sender_id, self.receiver_id, self.final_receiver_id, 
+        self.task_id, self.send_time, self.seq_num, self.deadline, self.data_type, self.request); 
 
 class task:
     def __init__(self, task_id, data_size, packet_size, task_callback, deadline):
@@ -106,9 +109,10 @@ class packet_system:
         self.receive_queue.append(packet);
 
     def send_packet(self, packet):
-        if packet.data_type == message_type.DATA or packet.data_type == message_type.REQ:
+        if packet.data_type == message_type.DATA or packet.data_type == message_type.REQ and packet.ack is True:
             #Here, if the message contains data
-            #Add to messages waiting to 
+            #Add to messages waiting to acknowlegement queue.
+            #Note broadcasts do not receive acknowledgements
             self.ack_wait_queue["receiver:" + packet.receiver_id + "|seq_number:" + str(packet.seq_num)] = packet;
         self.send_queue.append(packet);
 
@@ -145,12 +149,14 @@ class packet_system:
                 self.log_data(received_data.data_type, ", Send Time: "+ str(received_data.send_time) + ", Current Time: " + str(self.current_time), "Sender: " + received_data.sender_id)                    
                 continue;
             if received_data.data_type == message_type.DATA:
-                self.send_packet(self.create_ack_packet(received_data));
+                if received_data.ack is True:
+                    #Broadcasts do not receive acknowledgements 
+                    self.send_packet(self.create_ack_packet(received_data));
                 self.log_data(message_type.DATA, ", Send Time: "+ str(received_data.send_time) + ", Current Time: " + str(self.current_time), "Sender: " + received_data.sender_id)                    
             elif received_data.data_type == message_type.REQ:
                 #....
                 self.send_packet(self.create_ack_packet(received_data));
-                self.wireless_system.handle_data_request(received_data);
+                self.wireless_system.handle_request_packet(received_data);
                 self.log_data(message_type.REQ, ", Send Time: "+ str(received_data.send_time) + ", Current Time: " + str(self.current_time), "Sender: " + received_data.sender_id)                    
             else:
                 #Received an acknowledgement ... 

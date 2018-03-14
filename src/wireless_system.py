@@ -60,19 +60,34 @@ class wireless_system:
     def schedule_packet(self, packet):
         print("TBD");    
 
-    def upload_data_task(self, sender_id, task_id, data_size, receiver_id, deadline):
+    def get_data_packets(self, sender_id, task_id, data_size, receiver_id, deadline):
         self.message_system.get_data_packets(sender_id, task_id, data_size, receiver_id, deadline);
 
-    def upload_data_request(self, sender_id, task_id, data_size, request, receiver_id, deadline):
+    def get_request_packet(self, sender_id, task_id, data_size, request, receiver_id, deadline):
         self.message_system.get_request_packet(sender_id, task_id, data_size, request, receiver_id, deadline);
 
-    def upload_packet(self, packet):
-        self.message_system.upload_packet(packet);
+    def unicast_packet(self, packet):
+        self.message_system.unicast_packet(packet);
 
-    def handle_data_request(self, packet):
-        #Thus, the packet already arrived and now must have arrived
-        print("What")
+    def broadcast_packet(self, packet, position, max_range):
+        max_range = max_range ** 2;
+        id_list = []
+        for veh_id in self.updated_vehicle_id_list:
+            if self.vehicle_dict[veh_id].get_distance(position) < max_range:
+                id_list.append(veh_id);
+        self.message_system.broadcast_packet(packet, id_list);
 
+    def handle_request_packet(self, packet):
+        #First, find which network node is necessary
+        if packet.receiver_id in self.fixed_node_dict:
+            network_node = self.fixed_node_dict[packet.receiver_id]
+        elif packet.receiver_id in self.vehicle_dict:
+            network_node = self.vehicle_dict[packet.receiver_id]
+        else:
+            #Can't find receiver id 
+            return;
+        network_node.handle_data_request(packet);
+        
     def add_lte(self, num_lte=100, lte_range=5000, lte_placement=gaussian_placement):
         self.lte_list = lte_placement(num_lte, self.map_size, node_type.LTE, lte_range);
         for i in range(num_lte):

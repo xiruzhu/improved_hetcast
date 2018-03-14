@@ -93,7 +93,15 @@ class messaging_system:
     def schedule_packet(self, packet):
         self.wireless_system.schedule_packet(packet);
 
-    def upload_packet(self, packet):
+    def broadcast_packet(self, packet, broadcast_id_list):
+        #Send to all units within range the packet .... 
+        for broadcast_id in broadcast_id_list:
+            new_packet = packet.clone();
+            new_packet.receiver_id = broadcast_id;
+            self.unicast_packet(new_packet, ack=False);
+
+    def unicast_packet(self, packet, ack=True):
+        packet.ack = ack;
         queue = self.get_message_queue(packet.receiver_id);
         if queue == None:
             return;
