@@ -77,6 +77,23 @@ class wireless_system:
     def get_request_packet(self, sender_id, task_id, data_size, request, receiver_id, deadline):
         self.message_system.get_request_packet(sender_id, task_id, data_size, request, receiver_id, deadline);
 
+    def is_fixed_node(self, target_id):
+        return target_id in self.fixed_network_access;
+
+    def is_vehicle_node(self, target_id):
+        return target_id in self.vehicle_network_access;
+
+    def get_node_position(self, target_id):
+        #First, find which network node is necessary
+        if target_id in self.fixed_node_dict:
+            network_node = self.fixed_node_dict[target_id]
+        elif target_id in self.vehicle_dict:
+            network_node = self.vehicle_dict[target_id]
+        else:
+            #Can't find receiver id 
+            return None;
+        return network_node.get_location();
+
     def get_vehicle_in_range(self, packet):
         #First, find which network node is necessary
         if packet.sender_id in self.fixed_node_dict:
@@ -93,7 +110,7 @@ class wireless_system:
             if self.vehicle_dict[veh_id].get_distance(location) < max_range:
                 id_list.append(veh_id);
 
-    def handle_request_packet(self, packet):
+    def receive_data_packet(self, packet):
         #First, find which network node is necessary
         if packet.receiver_id in self.fixed_node_dict:
             network_node = self.fixed_node_dict[packet.receiver_id]
@@ -102,7 +119,18 @@ class wireless_system:
         else:
             #Can't find receiver id 
             return;
-        network_node.handle_data_request(packet);
+        network_node.receive_data_packet(packet);
+
+    def receive_request_packet(self, packet):
+        #First, find which network node is necessary
+        if packet.receiver_id in self.fixed_node_dict:
+            network_node = self.fixed_node_dict[packet.receiver_id]
+        elif packet.receiver_id in self.vehicle_dict:
+            network_node = self.vehicle_dict[packet.receiver_id]
+        else:
+            #Can't find receiver id 
+            return;
+        network_node.receive_request_packet(packet);
         
     def add_lte(self, num_lte=100, lte_range=5000, lte_placement=gaussian_placement):
         self.lte_list = lte_placement(num_lte, self.map_size, node_type.LTE, lte_range);

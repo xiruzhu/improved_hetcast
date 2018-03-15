@@ -112,11 +112,12 @@ class packet_system:
                 if received_data.ack is True:
                     #Broadcasts do not receive acknowledgements 
                     self.send_packet(self.create_ack_packet(received_data));
+                self.wireless_system.receive_data_packet(received_data);
                 self.log_data(message_type.DATA, ", Send Time: "+ str(received_data.send_time) + ", Current Time: " + str(self.current_time), "Sender: " + received_data.sender_id)                    
             elif received_data.data_type == message_type.REQ:
                 #....
                 self.send_packet(self.create_ack_packet(received_data));
-                self.wireless_system.handle_request_packet(received_data);
+                self.wireless_system.receive_request_packet(received_data);
                 self.log_data(message_type.REQ, ", Send Time: "+ str(received_data.send_time) + ", Current Time: " + str(self.current_time), "Sender: " + received_data.sender_id)                    
             else:
                 #Received an acknowledgement ... 

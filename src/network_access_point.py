@@ -15,22 +15,16 @@ class task:
         self.data_size = data_size;
         self.deadline = deadline;
         self.packet_received = {};
-        self.ack_count = 0;
         self.outcome = task_outcome.ONGOING;
 
     #Gets task status
     def get_task_status(self):
         return self.outcome;
 
-    def set_packet_received(self, seq_num, status):
-        if status == False:
-            self.outcome = task_outcome.FAILED;
-        else:
-            self.packet_received[seq_num] = True;
-            self.ack_count += 1;
-            if self.ack_count == len(self.packet_ack):
-                self.outcome = task_outcome.SUCCESS;
-    
+    def set_packet_received(self, packet):
+        self.packet_received[packet.seq_num] = True;
+        if self.num_packets == len(self.packet_received):
+            self.outcome = task_outcome.SUCCESS;
     #Returns false if failed check
     #True otherwise
     def check_deadline(self, current_time):
@@ -54,11 +48,20 @@ class network_access_point:
         self.data_system = data_system;
 
         self.task_queue = {};
-    
+        self.num_success_task = 0;
+        self.num_failed_task = 0;
+
     def update_tasks():
         for item in self.task_queue.keys():
-            if item.outcome == 
-
+            if item.outcome == task_outcome.SUCCESS:
+                self.task_queue.pop();
+                self.num_success_task += 1;
+            elif item.outcome == task_outcome.FAILED:
+                self.task_queue.pop();
+                self.num_failed_task += 1;
+            elif item.deadline > self.current_time:
+                self.task_queue.pop();
+                self.num_failed_task += 1;
 
     def get_wireless_range(self):
         return self.wireless_range;
@@ -82,14 +85,17 @@ class network_access_point:
         return self.node_id;
 
     def update(self):
-        print("ERROR")
-        quit(1);
+        self.update_tasks();
 
     def get_distance(self, position):
         current_position = self.get_location();
         return (current_position[0] - position[0]) ** 2 + (current_position[0] - position[0]) ** 2;
 
-    def handle_request_packet(self, packet):
+    def receive_data_packet(self, packet):
+        if packet.task_id in self.task_queue:
+            self.task_queue[packet.task_id].set_packet_received(packet);
+
+    def receive_request_packet(self, packet):
         self.data_system.handle_request_packet(packet);
 
     def naive_scheduling(self, packet):
@@ -109,6 +115,7 @@ class network_access_point:
 
     #Given size of request packet, this can be sent immediately rather than be scheduled
     def request_data(self, sender_id, task_id, data_size, request, receiver_id, deadline):
+        self.task_queue[task_id] = task(task_id, data_size, self.packet_size, deadline);
         self.wireless_system.get_receiver_packets(sender_id, task_id, data_size, request, receiver_id, deadline);
 
 class global_network_node(network_access_point):
@@ -122,16 +129,27 @@ class global_network_node(network_access_point):
         self.data_system = global_data_system(self, global_system, current_time, time_decay=time_decay);
         self.packet_size = packet_size;
 
+
     def naive_scheduling(self, packet):
         #Given this is the naive algorithm, we schedule packets the moment we receive the requests
         #Thus, given this packet, we can deliver now without any regards ...
         
         #At the global level, find the RSU/LTE closest to the target to send ... 
-        print("LIFE SUCKS")
+        if self.wireless_system.is_fixed_node(packet.final_receiver_id):
+            #Directly send the packet to target
+            self.wireless_system.add_packet_to_send_queue(packet);
+        #For vehicles
+        elif self.wireless_system.is_vehicle_node(packet.final_receiver_id):
+            #We have to find the rsu closests ... 
+            sorted_list = self.wireless_system.map_system.get_access_points_in_range(self.wireless_system.get_node_position(packet.final_receiver_id));
+            if len(sorted_list > 0):
+                packet.receiver_id = sorted_list[0][1]; #Set the receiver id to the closest access node
+                self.wireless_system.add_packet_to_send_queue(packet);
 
     def update(self):
         self.data_system.update();
-        self.current_time += self.time_decay;    
+        self.update_tasks();  
+        self.current_time += self.time_decay;  
 
 #Can be either rsu or lte
 class fixed_network_node(network_access_point):
@@ -150,12 +168,32 @@ class fixed_network_node(network_access_point):
         self.access_node = access_node;
         self.packet_size = packet_size;
 
+    def naive_scheduling(self, packet):
+        #Given this is the naive algorithm, we schedule packets the moment we receive the requests
+        #Thus, given this packet, we can deliver now without any regards ...
+        #At the LTE/RSU level, check if target is fixed node ... 
+        if self.wireless_system.is_fixed_node(packet.final_receiver_id):
+            #Directly send the packet to target
+            self.wireless_system.add_packet_to_send_queue(packet);
+        #For vehicles
+        elif self.wireless_system.is_vehicle_node(packet.final_receiver_id):
+            #If in range
+            position = self.wireless_system.get_node_position(packet.final_receiver_id);
+            if self.get_distance(position) < self.wireless_range ** 2:
+                packet.receiver_id = packet.final_receiver_id;
+                self.wireless_system.add_packet_to_send_queue(packet);
+            else:
+                #Send to global to process ... 
+                packet.receiver_id = "GLOBAL_DATA";
+                self.wireless_system.add_packet_to_send_queue(packet);
+
     def update(self):
         self.data_system.update();
         self.current_time += self.time_decay;
+        self.update_tasks();
 
 class vehicle_network_node(network_access_point):
-    def __init__(self, vehicle_id, wireless_system, global_data_system, traci, current_time, packet_size=2000, time_decay=0.1, upload_speed=100, download_speed=100, wireless_range=250):
+    def __init__(self, vehicle_id, wireless_system, global_data_system, traci, current_time, packet_size=2000, time_decay=0.1, upload_speed=100, download_speed=100, wireless_range=100):
         self.node_id = vehicle_id;
         self.traci = traci;
         self.time_decay = time_decay;
@@ -171,8 +209,24 @@ class vehicle_network_node(network_access_point):
     def get_local_access_node_id(self):
         return self.wireless_system.get_local_access_point(self.get_location());
 
+    def naive_scheduling(self, packet):
+        #Given this is the naive algorithm, we schedule packets the moment we receive the requests
+        #Thus, given this packet, we can deliver now without any regards ...
+        #For vehicles, if within range of vehicle ... 
+        if self.wireless_system.is_vehicle_node(packet.final_receiver_id):
+            #If in range, use vehicular network to directly send data ... 
+            position = self.wireless_system.get_node_position(packet.final_receiver_id);
+            if self.get_distance(position) < self.wireless_range ** 2:
+                packet.receiver_id = packet.final_receiver_id;
+                self.wireless_system.add_packet_to_send_queue(packet);
+                return;
+        sorted_list = self.wireless_system.map_system.get_access_points_in_range(self.wireless_system.get_node_position(packet.final_receiver_id));
+        packet.receiver_id = sorted_list[0][1];
+        self.wireless_system.add_packet_to_send_queue(packet);
+
     def update(self):
         if math.ceil(self.current_time) - self.current_time < self.time_decay:
             self.location = self.traci.vehicle.getPosition(self.get_id());
         self.data_system.update();
+        self.update_tasks();
         self.current_time += self.time_decay;
