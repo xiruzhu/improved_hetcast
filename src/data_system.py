@@ -214,7 +214,7 @@ class vehicle_data_system:
             return;
         data_size = packet.request["data_size"];     
         deadline = np.random.uniform(self.deadline_range[0], self.deadline_range[1]);
-        self.network_access_node.upload_data(self.network_access_node.get_id() ,"data:" + self.network_access_node.get_id() + ":" + str(self.current_time), data_size, packet.sender_id, self.task_callback, deadline);
+        self.network_access_node.upload_data(self.network_access_node.get_id() ,"data:" + self.network_access_node.get_id() + ":" + str(self.current_time), data_size, packet.sender_id, deadline);
 
     def task_callback(self, task):
         if task.outcome == task_outcome.SUCCESS:
@@ -243,7 +243,7 @@ class vehicle_data_system:
             else:
                 data_size = data_need.get_data_size(data_type.HUG);
             request = {"data_id":data_need.data_id, "data_size":data_size};
-            self.network_access_node.request_data(self.network_access_node.get_id(), "request:" + self.network_access_node.get_id() + ":" + str(self.current_time), self.status_size, request, data_need.origin, self.task_callback);
+            self.network_access_node.request_data(self.network_access_node.get_id(), "request:" + self.network_access_node.get_id() + ":" + str(self.current_time), self.status_size, request, data_need.origin);
 
     #Note we send status messages once every second
     def update(self):
@@ -255,7 +255,7 @@ class vehicle_data_system:
             deadline = np.random.uniform(self.deadline_range[0], self.deadline_range[1]);
             local_rsu_id = self.network_access_node.get_local_access_node_id();
             if local_rsu_id != None:
-                self.network_access_node.upload_data(self.network_access_node.get_id(),"status:" + self.network_access_node.get_id() + ":" + str(self.current_time), self.status_size, local_rsu_id, self.task_callback, deadline);
+                self.network_access_node.upload_data(self.network_access_node.get_id(),"status:" + self.network_access_node.get_id() + ":" + str(self.current_time), self.status_size, local_rsu_id, deadline);
         
         data_rate = self.local_data_rate;
         while data_rate > 0:

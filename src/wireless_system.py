@@ -58,7 +58,15 @@ class wireless_system:
             return map_points[0][1];
 
     def schedule_packet(self, packet):
-        print("TBD");    
+        #First, find which network node is necessary
+        if packet.receiver_id in self.fixed_node_dict:
+            network_node = self.fixed_node_dict[packet.receiver_id]
+        elif packet.receiver_id in self.vehicle_dict:
+            network_node = self.vehicle_dict[packet.receiver_id]
+        else:
+            #Can't find receiver id 
+            return;
+        network_node.schedule_packet(packet);
 
     def get_data_packets(self, sender_id, task_id, data_size, receiver_id, deadline):
         self.message_system.get_data_packets(sender_id, task_id, data_size, receiver_id, deadline);
@@ -66,16 +74,21 @@ class wireless_system:
     def get_request_packet(self, sender_id, task_id, data_size, request, receiver_id, deadline):
         self.message_system.get_request_packet(sender_id, task_id, data_size, request, receiver_id, deadline);
 
-    def unicast_packet(self, packet):
-        self.message_system.unicast_packet(packet);
-
-    def broadcast_packet(self, packet, position, max_range):
-        max_range = max_range ** 2;
+    def get_vehicle_in_range(self, packet):
+        #First, find which network node is necessary
+        if packet.sender_id in self.fixed_node_dict:
+            network_node = self.fixed_node_dict[packet.receiver_id]
+        elif packet.receiver_id in self.vehicle_dict:
+            network_node = self.vehicle_dict[packet.receiver_id]
+        else:
+            #Can't find receiver id 
+            return;
+        location = network_node.get_location();
+        max_range = network_node.get_wireless_range() ** 2;
         id_list = []
         for veh_id in self.updated_vehicle_id_list:
-            if self.vehicle_dict[veh_id].get_distance(position) < max_range:
+            if self.vehicle_dict[veh_id].get_distance(location) < max_range:
                 id_list.append(veh_id);
-        self.message_system.broadcast_packet(packet, id_list);
 
     def handle_request_packet(self, packet):
         #First, find which network node is necessary

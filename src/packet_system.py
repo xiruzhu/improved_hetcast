@@ -13,7 +13,7 @@ class message_type(Enum):
     REQ = 2
 
 class packet:
-    def __init__(self, sender_id, original_sender_id, receiver_id, final_receiver_id, task_id, send_time, seq_num, deadline, data_type=message_type.DATA, request=None):
+    def __init__(self, sender_id, original_sender_id, receiver_id, final_receiver_id, task_id, send_time, seq_num, deadline, data_type=message_type.DATA, request=None, num_packets=1):
         self.sender_id = sender_id;
         self.original_sender_id = original_sender_id;
         self.receiver_id = receiver_id;
@@ -24,8 +24,9 @@ class packet:
         self.request = request;
         self.task_id = task_id;
         self.deadline = deadline;
-    
-    def clone():
+        self.num_packets = num_packets; #Number of packets for this chain ... 
+
+    def clone(self):
         return packet(self.sender_id, self.original_sender_id, self.receiver_id, self.final_receiver_id, 
         self.task_id, self.send_time, self.seq_num, self.deadline, self.data_type, self.request); 
 
@@ -101,7 +102,7 @@ class packet_system:
         num_packets = (data_size + self.packet_size - 1)//self.packet_size;
         packet_list = [];
         for i in range(num_packets):
-            new_packet = self.create_data_packet(original_sender_id, None, final_receiver_id, task_id, deadline + self.current_time);
+            new_packet = self.create_data_packet(original_sender_id, None, final_receiver_id, task_id, deadline + self.current_time, num_packets);
             packet_list.append(new_packet);
         return packet_list;
 
@@ -121,8 +122,8 @@ class packet_system:
         log_file.write(str(message_type) + "," + message + ", " + sender + "\n")
         log_file.close();
 
-    def create_data_packet(self, original_receiver_id, receiver_id, final_receiver_id, task_id, deadline, data_type=message_type.DATA):
-        new_packet = packet(self.system_id, original_receiver_id, receiver_id, final_receiver_id, task_id, deadline, self.current_time, self.sequence_number, data_type);
+    def create_data_packet(self, original_receiver_id, receiver_id, final_receiver_id, task_id, deadline, num_packets, data_type=message_type.DATA):
+        new_packet = packet(self.system_id, original_receiver_id, receiver_id, final_receiver_id, task_id, deadline, self.current_time, self.sequence_number, num_packets, data_type);
         self.sequence_number += 1;
         if self.sequence_number % 2147483647 == 0:
             self.sequence_number = 0;
@@ -166,11 +167,11 @@ class packet_system:
                     self.log_data(message_type.ACK, ", Send Time: "+ str(received_data.send_time) + ", Current Time: " + str(self.current_time), "Sender: " + received_data.sender_id)                    
         #Now after we handled all the received data we can handle 
         #We must handle the data with acknowledgement we have not received which is past the deadline ... 
-        for item in self.ack_wait_queue:
+        for item in self.ack_wait_queue.keys():
             if self.ack_wait_queue[item].deadline < self.current_time:
                 #Thus, this item can no longer be send and has failed ... 
                 old_packet = self.ack_wait_queue.pop(item);
-            elif self.ack_wait_queue[item].send_time + self.deadline > self.current_time:
+            elif self.ack_wait_queue[item].send_time + self.resend_rate > self.current_time:
                 #We need to resend the data as we did not receive the acknowledgement ....  
                 old_packet = self.ack_wait_queue.pop(item);
                 old_packet.send_time = self.current_time;
@@ -179,7 +180,10 @@ class packet_system:
         #Finally, we must handle sending data
         for i in range(min(self.send_speed, len(self.send_queue))):
             new_packet = self.send_queue.pop(0);
-            self.message_system.upload_data(new_packet);
+            if new_packet.ack == False:
+                self.message_system.broadcast_packet(new_packet);
+            else:
+                self.message_system.unicast_packet(new_packet);
         self.current_time += self.time_decay;
 
 

@@ -90,16 +90,24 @@ class messaging_system:
             #Cannot find the packet system and therefore it fails
             return None;
 
+    def add_packet_to_send_queue(self, packet):
+        packet_sys = self.get_packet_system(packet.receiver_id);
+        if packet_sys == None:
+            return;
+        packet_sys.send_packet(packet);
+
     def schedule_packet(self, packet):
         self.wireless_system.schedule_packet(packet);
 
-    def broadcast_packet(self, packet, broadcast_id_list):
+    def broadcast_packet(self, packet):
+        broadcast_id_list = self.wireless_system.get_vehicle_in_range(packet);
         #Send to all units within range the packet .... 
         for broadcast_id in broadcast_id_list:
             new_packet = packet.clone();
             new_packet.receiver_id = broadcast_id;
             self.unicast_packet(new_packet, ack=False);
 
+    #Send a message towards a single target
     def unicast_packet(self, packet, ack=True):
         packet.ack = ack;
         queue = self.get_message_queue(packet.receiver_id);

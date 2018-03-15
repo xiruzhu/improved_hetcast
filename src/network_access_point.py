@@ -6,14 +6,19 @@ import math
 
 #Kind of an interface class for what we need ... 
 class network_access_point:
-    def __init__(self, node_id, position, data_system, traci, current_time, packet_size=2000, time_decay=0.1, upload_speed=100, download_speed=100):
+    def __init__(self, node_id, position, wireless_system, data_system, traci, current_time, packet_size=2000, time_decay=0.1, upload_speed=100, download_speed=100, wireless_range=100):
         self.node_id = node_id;
         self.upload_speed = upload_speed;
         self.download_speed = download_speed;
         self.location = position;
+        self.wireless_system = wireless_system;
         self.current_time = current_time;
         self.time_decay = time_decay;
         self.packet_size = packet_size;
+        self.wireless_range = wireless_range;
+
+    def get_wireless_range(self):
+        return self.wireless_range;
 
     def set_speeds(self, upload_speed, download_speed):
         self.upload_speed = upload_speed;
@@ -40,24 +45,26 @@ class network_access_point:
     def get_distance(self, position):
         current_position = self.get_location();
         return (current_position[0] - position[0]) ** 2 + (current_position[0] - position[0]) ** 2;
-    #Immediately send data
-    def __upload_data_now__(self, packet_list):
-        print("TBD")
 
     def handle_request_packet(self, packet):
-        print("TBD");
+        self.handle_request_packet(packet);
 
-    def naive_scheduling(self, sender_id, task_id, data_size, receiver_id, callback_function, deadline):
+    def naive_scheduling(self, packet):
         #Given this is the naive algorithm, we schedule packets the moment we receive the requests
-        #Thus, given this task, we can deliver before we split
-        self.wireless_system.upload_data_task(sender_id, task_id, data_size, receiver_id, callback_function, deadline);
+        #Thus, given this packet, we can deliver now without any regards ...
+        print("TDB");
 
-    def upload_data(self, sender_id, task_id, data_size, receiver_id, callback_function, deadline):
-        self.wireless_system.get_data_packets(self, sender_id, task_id, data_size, receiver_id, callback_function, deadline);
+    def schedule_packet(self, packet):
+        #Given a packet, we need to decide who to send it to and when ... 
+        #This will be different based on node
+        self.naive_scheduling(packet);
+
+    def upload_data(self, sender_id, task_id, data_size, receiver_id, deadline):
+        self.wireless_system.get_data_packets(self, sender_id, task_id, data_size, receiver_id, deadline);
 
     #Given size of request packet, this can be sent immediately rather than be scheduled
-    def request_data(self, sender_id, task_id, data_size, request, receiver_id, callback_function):
-        self.wireless_system.get_receiver_packets(sender_id, task_id, data_size, request, receiver_id, callback_function);
+    def request_data(self, sender_id, task_id, data_size, request, receiver_id, deadline):
+        self.wireless_system.get_receiver_packets(sender_id, task_id, data_size, request, receiver_id, deadline);
 
 class global_network_node(network_access_point):
     def __init__(self, wireless_system, global_system, traci, current_time, node_id="GLOBAL_DATA", packet_size=2000, time_decay=0.1):
@@ -74,14 +81,12 @@ class global_network_node(network_access_point):
         self.data_system.update();
         self.current_time += self.time_decay;    
 
-    def advanced_upload_scheduling(self, sender_id, task_id, data_size, receiver_id, callback_function, deadline):
-        print("Not yet implemented");
-
 #Can be either rsu or lte
 class fixed_network_node(network_access_point):
     def __init__(self, access_node, wireless_system, global_data_system, traci, current_time, packet_size=2000, time_decay=0.1, upload_speed=100, download_speed=100):
         self.node_id = access_node.get_id();
         self.location = access_node.get_location();
+        self.wireless_range = access_node.get_wireless_range();
 
         self.traci = traci;
         self.time_decay = time_decay;
@@ -97,11 +102,8 @@ class fixed_network_node(network_access_point):
         self.data_system.update();
         self.current_time += self.time_decay;
 
-    def advanced_upload_scheduling(self, sender_id, task_id, data_size, receiver_id, callback_function, deadline):
-        print("Not yet implemented");
-
 class vehicle_network_node(network_access_point):
-    def __init__(self, vehicle_id, wireless_system, global_data_system, traci, current_time, packet_size=2000, time_decay=0.1, upload_speed=100, download_speed=100):
+    def __init__(self, vehicle_id, wireless_system, global_data_system, traci, current_time, packet_size=2000, time_decay=0.1, upload_speed=100, download_speed=100, wireless_range=250):
         self.node_id = vehicle_id;
         self.traci = traci;
         self.time_decay = time_decay;
@@ -112,6 +114,7 @@ class vehicle_network_node(network_access_point):
         self.data_system = vehicle_data_system(self, global_data_system, current_time, time_decay=time_decay)
         self.location = traci.vehicle.getPosition(self.get_id());
         self.packet_size = packet_size;
+        self.wireless_range = wireless_range;
 
     def get_local_access_node_id(self):
         return self.wireless_system.get_local_access_point(self.get_location());
@@ -121,6 +124,3 @@ class vehicle_network_node(network_access_point):
             self.location = self.traci.vehicle.getPosition(self.get_id());
         self.data_system.update();
         self.current_time += self.time_decay;
-
-    def advanced_upload_scheduling(self, sender_id, task_id, data_size, receiver_id, callback_function, deadline):
-        print("Not yet implemented");
