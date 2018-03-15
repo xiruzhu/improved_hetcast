@@ -2,11 +2,6 @@
 from enum import Enum
 from functools import total_ordering
 
-class task_outcome(Enum):
-    ONGOING = 0
-    FAILED = 1
-    SUCCESS = 2
-
 class message_type(Enum):
     ACK = 0
     DATA = 1
@@ -29,42 +24,6 @@ class packet:
     def clone(self):
         return packet(self.sender_id, self.original_sender_id, self.receiver_id, self.final_receiver_id, 
         self.task_id, self.send_time, self.seq_num, self.deadline, self.data_type, self.request); 
-
-class task:
-    def __init__(self, task_id, data_size, packet_size, task_callback, deadline):
-        self.num_packets = (data_size + packet_size - 1)//packet_size;
-        self.data_size = data_size;
-        self.task_callback = task_callback;
-        self.deadline = deadline;
-        self.packet_ack = {};
-        self.ack_count = 0;
-        self.outcome = task_outcome.ONGOING;
-
-    #initializes a packet
-    def init_packet_ack(self, seq_num):
-        self.packet_ack[seq_num] = None;
-
-    #Gets task status
-    def get_task_status(self):
-        return self.outcome;
-
-    #Set the ack status of a task's packet to status
-    def set_packet_ack(self, seq_num, status):
-        if status == False:
-            self.outcome = task_outcome.FAILED;
-        else:
-            self.packet_ack[seq_num] = True;
-            self.ack_count += 1;
-            if self.ack_count == len(self.packet_ack):
-                self.outcome = True;
-    
-    #Returns false if failed check
-    #True otherwise
-    def check_deadline(self, current_time):
-        if current_time > self.deadline:
-            self.outcome = False;
-            return False;
-        return True;
 
 class packet_system:
     def __init__(self, system_id, wireless_system, message_system, log_dir="../logs/", time_decay=0.1, up_speed=1000, down_speed=1000,current_time=0, packet_size=2000, resend_rate=3):

@@ -4,6 +4,41 @@ from message_system import message_queue
 from access_node import access_node
 import math
 
+class task_outcome(Enum):
+    ONGOING = 0
+    FAILED = 1
+    SUCCESS = 2
+
+class task:
+    def __init__(self, task_id, data_size, packet_size, deadline):
+        self.num_packets = (data_size + packet_size - 1)//packet_size;
+        self.data_size = data_size;
+        self.deadline = deadline;
+        self.packet_received = {};
+        self.ack_count = 0;
+        self.outcome = task_outcome.ONGOING;
+
+    #Gets task status
+    def get_task_status(self):
+        return self.outcome;
+
+    def set_packet_received(self, seq_num, status):
+        if status == False:
+            self.outcome = task_outcome.FAILED;
+        else:
+            self.packet_received[seq_num] = True;
+            self.ack_count += 1;
+            if self.ack_count == len(self.packet_ack):
+                self.outcome = task_outcome.SUCCESS;
+    
+    #Returns false if failed check
+    #True otherwise
+    def check_deadline(self, current_time):
+        if current_time > self.deadline:
+            self.outcome = False;
+            return False;
+        return True;
+
 #Kind of an interface class for what we need ... 
 class network_access_point:
     def __init__(self, node_id, position, wireless_system, data_system, traci, current_time, packet_size=2000, time_decay=0.1, upload_speed=100, download_speed=100, wireless_range=100):
@@ -17,6 +52,13 @@ class network_access_point:
         self.packet_size = packet_size;
         self.wireless_range = wireless_range;
         self.data_system = data_system;
+
+        self.task_queue = {};
+    
+    def update_tasks():
+        for item in self.task_queue.keys():
+            if item.outcome == 
+
 
     def get_wireless_range(self):
         return self.wireless_range;
