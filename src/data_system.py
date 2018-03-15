@@ -17,7 +17,6 @@
 # In terms of responsiveness, we utilize 3 categories, low, medium, high
 # This will depend on what the user needs and is not assigned ahead of time  
 
-from packet_system import task_outcome
 import numpy as np
 from enum import Enum
 import math
@@ -192,13 +191,9 @@ class vehicle_data_system:
         self.data_item_dict = {};
         self.global_data_system = global_data_system;
         self.status_size = status_size;
-        self.failures = 0;
-        self.success = 0;
         self.deadline_range = deadline_range;
-        
         self.global_data_rate = global_data_rate * time_decay;
         self.local_data_rate = local_data_rate * time_decay;
-        
         self.time_decay = time_decay;
 
     def get_data(self, data_id):
@@ -215,12 +210,6 @@ class vehicle_data_system:
         data_size = packet.request["data_size"];     
         deadline = np.random.uniform(self.deadline_range[0], self.deadline_range[1]);
         self.network_access_node.upload_data(self.network_access_node.get_id() ,"data:" + self.network_access_node.get_id() + ":" + str(self.current_time), data_size, packet.sender_id, deadline);
-
-    def task_callback(self, task):
-        if task.outcome == task_outcome.SUCCESS:
-            self.success += 1;
-        else:
-            self.failures += 1;
 
     def select_data(self, local=False, decayed=False):
         if local:

@@ -3,6 +3,7 @@ from data_system import vehicle_data_system, fixed_data_system, global_data_syst
 from message_system import message_queue
 from access_node import access_node
 import math
+from enum import Enum
 
 class task_outcome(Enum):
     ONGOING = 0
@@ -51,7 +52,7 @@ class network_access_point:
         self.num_success_task = 0;
         self.num_failed_task = 0;
 
-    def update_tasks():
+    def update_tasks(self):
         for item in self.task_queue.keys():
             if item.outcome == task_outcome.SUCCESS:
                 self.task_queue.pop();
@@ -105,13 +106,16 @@ class network_access_point:
         #The real problem is finding where to send this packet ... 
         print("TBD")
 
+    def print_success_fail_ratio(self):
+        print("Success: ", self.num_success_task, "Failures: ", self.num_failed_task, "Total: ", self.num_failed_task + self.num_success_task);
+
     def schedule_packet(self, packet):
         #Given a packet, we need to decide who to send it to and when ... 
         #This will be different based on node
         self.naive_scheduling(packet);
 
     def upload_data(self, sender_id, task_id, data_size, receiver_id, deadline):
-        self.wireless_system.get_data_packets(self, sender_id, task_id, data_size, receiver_id, deadline);
+        self.wireless_system.get_data_packets(sender_id, task_id, data_size, receiver_id, deadline);
 
     #Given size of request packet, this can be sent immediately rather than be scheduled
     def request_data(self, sender_id, task_id, data_size, request, receiver_id, deadline):
@@ -128,6 +132,7 @@ class global_network_node(network_access_point):
         self.current_time = current_time;
         self.data_system = global_data_system(self, global_system, current_time, time_decay=time_decay);
         self.packet_size = packet_size;
+        self.task_queue = {};
 
 
     def naive_scheduling(self, packet):
@@ -167,6 +172,7 @@ class fixed_network_node(network_access_point):
         self.data_system = fixed_data_system(self, global_data_system, current_time, time_decay=time_decay);
         self.access_node = access_node;
         self.packet_size = packet_size;
+        self.task_queue = {};
 
     def naive_scheduling(self, packet):
         #Given this is the naive algorithm, we schedule packets the moment we receive the requests
@@ -205,6 +211,7 @@ class vehicle_network_node(network_access_point):
         self.location = traci.vehicle.getPosition(self.get_id());
         self.packet_size = packet_size;
         self.wireless_range = wireless_range;
+        self.task_queue = {};
 
     def get_local_access_node_id(self):
         return self.wireless_system.get_local_access_point(self.get_location());
