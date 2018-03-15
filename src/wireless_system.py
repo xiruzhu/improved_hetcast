@@ -46,7 +46,7 @@ class wireless_system:
         self.fixed_network_access["GLOBAL_DATA"] = global_network_node(self, self.complete_data_system, self.traci, self.current_time, time_decay=time_decay)
         self.vehicle_network_access = {};
         self.update();
-
+        
     def get_vehicle_id_list(self):
         return self.updated_vehicle_id_list;
 
@@ -67,6 +67,9 @@ class wireless_system:
             #Can't find receiver id 
             return;
         network_node.schedule_packet(packet);
+
+    def add_packet_to_send_queue(self, packet):
+        self.message_system.add_packet_to_send_queue(packet);
 
     def get_data_packets(self, sender_id, task_id, data_size, receiver_id, deadline):
         self.message_system.get_data_packets(sender_id, task_id, data_size, receiver_id, deadline);

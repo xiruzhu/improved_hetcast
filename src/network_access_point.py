@@ -16,6 +16,7 @@ class network_access_point:
         self.time_decay = time_decay;
         self.packet_size = packet_size;
         self.wireless_range = wireless_range;
+        self.data_system = data_system;
 
     def get_wireless_range(self):
         return self.wireless_range;
@@ -47,12 +48,14 @@ class network_access_point:
         return (current_position[0] - position[0]) ** 2 + (current_position[0] - position[0]) ** 2;
 
     def handle_request_packet(self, packet):
-        self.handle_request_packet(packet);
+        self.data_system.handle_request_packet(packet);
 
     def naive_scheduling(self, packet):
         #Given this is the naive algorithm, we schedule packets the moment we receive the requests
         #Thus, given this packet, we can deliver now without any regards ...
-        print("TDB");
+        
+        #The real problem is finding where to send this packet ... 
+        print("TBD")
 
     def schedule_packet(self, packet):
         #Given a packet, we need to decide who to send it to and when ... 
@@ -76,6 +79,13 @@ class global_network_node(network_access_point):
         self.current_time = current_time;
         self.data_system = global_data_system(self, global_system, current_time, time_decay=time_decay);
         self.packet_size = packet_size;
+
+    def naive_scheduling(self, packet):
+        #Given this is the naive algorithm, we schedule packets the moment we receive the requests
+        #Thus, given this packet, we can deliver now without any regards ...
+        
+        #At the global level, find the RSU/LTE closest to the target to send ... 
+        print("LIFE SUCKS")
 
     def update(self):
         self.data_system.update();
