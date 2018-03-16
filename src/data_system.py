@@ -208,7 +208,7 @@ class vehicle_data_system:
             #Fail the task
             return;
         data_size = packet.request["data_size"];     
-        deadline = np.random.uniform(self.deadline_range[0], self.deadline_range[1]);
+        deadline = packet.request["deadline"];
         self.network_access_node.upload_data(self.network_access_node.get_id() ,"data:" + self.network_access_node.get_id() + ":" + str(self.current_time), data_size, packet.sender_id, deadline);
 
     def select_data(self, local=False, decayed=False):
@@ -231,8 +231,10 @@ class vehicle_data_system:
                 data_size = data_need.get_data_size(data_type.HIG);
             else:
                 data_size = data_need.get_data_size(data_type.HUG);
-            request = {"data_id":data_need.data_id, "data_size":data_size};
-            self.network_access_node.request_data(self.network_access_node.get_id(), "request:" + self.network_access_node.get_id() + ":" + str(self.current_time), self.status_size, request, data_need.origin);
+
+            deadline = np.random.uniform(self.deadline_range[0], self.deadline_range[1]);
+            request = {"data_id":data_need.data_id, "data_size":data_size, "deadline":deadline};
+            self.network_access_node.request_data(self.network_access_node.get_id(), "request:" + self.network_access_node.get_id() + ":" + str(self.current_time), self.status_size, request, data_need.origin, deadline);
 
     #Note we send status messages once every second
     def update(self):

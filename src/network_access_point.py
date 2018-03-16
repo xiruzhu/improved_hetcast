@@ -54,13 +54,13 @@ class network_access_point:
 
     def update_tasks(self):
         for item in self.task_queue.keys():
-            if item.outcome == task_outcome.SUCCESS:
+            if self.task_queue[item].outcome == task_outcome.SUCCESS:
                 self.task_queue.pop();
                 self.num_success_task += 1;
-            elif item.outcome == task_outcome.FAILED:
+            elif self.task_queue[item].outcome == task_outcome.FAILED:
                 self.task_queue.pop();
                 self.num_failed_task += 1;
-            elif item.deadline > self.current_time:
+            elif self.task_queue[item].deadline > self.current_time:
                 self.task_queue.pop();
                 self.num_failed_task += 1;
 
@@ -120,7 +120,7 @@ class network_access_point:
     #Given size of request packet, this can be sent immediately rather than be scheduled
     def request_data(self, sender_id, task_id, data_size, request, receiver_id, deadline):
         self.task_queue[task_id] = task(task_id, data_size, self.packet_size, deadline);
-        self.wireless_system.get_receiver_packets(sender_id, task_id, data_size, request, receiver_id, deadline);
+        self.wireless_system.get_request_packet(sender_id, task_id, data_size, request, receiver_id, deadline);
 
 class global_network_node(network_access_point):
     def __init__(self, wireless_system, global_system, traci, current_time, node_id="GLOBAL_DATA", packet_size=2000, time_decay=0.1):
