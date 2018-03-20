@@ -19,7 +19,18 @@ class packet:
         self.request = request;
         self.task_id = task_id;
         self.deadline = deadline;
+        self.ack = True;
         self.num_packets = num_packets; #Number of packets for this chain ... 
+
+    def print_packet(self):
+        print("Original Sender: ", self.original_sender_id);
+        print("Sender: ", self.sender_id);
+        print("Final Receiver: ", self.final_receiver_id);
+        print("Receiver: ", self.receiver_id);
+        print("Task ID:", self.task_id);
+        print("Data Type: ", self.data_type);
+        print("Deadline: ", self.deadline);
+        print(self.request);
 
     def clone(self):
         return packet(self.sender_id, self.original_sender_id, self.receiver_id, self.final_receiver_id, 
@@ -54,14 +65,14 @@ class packet_system:
         self.message_system.schedule_packet(packet);
 
     def get_request_packet(self, task_id, data_size, request, original_sender_id, final_receiver_id, deadline):
-        new_packet = self.create_req_packet(original_sender_id, None, final_receiver_id, task_id, request, deadline + self.current_time);
+        new_packet = self.create_req_packet(original_sender_id, None, final_receiver_id, task_id, request, deadline);
         return new_packet;
 
     def get_upload_packets(self, task_id, data_size, original_sender_id, final_receiver_id, deadline):
-        num_packets = (data_size + self.packet_size - 1)//self.packet_size;
+        num_packets = int((data_size + self.packet_size - 1)//self.packet_size);
         packet_list = [];
         for i in range(num_packets):
-            new_packet = self.create_data_packet(original_sender_id, None, final_receiver_id, task_id, deadline + self.current_time, num_packets);
+            new_packet = self.create_data_packet(original_sender_id, None, final_receiver_id, task_id, deadline, num_packets);
             packet_list.append(new_packet);
         return packet_list;
 
@@ -99,16 +110,21 @@ class packet_system:
         new_packet = packet(self.system_id, self.system_id, received_packet.sender_id, received_packet.sender_id, received_packet.task_id, self.resend_rate, self.current_time, received_packet.seq_num, data_type=message_type.ACK);
         return new_packet;
 
+    def get_time(self):
+        return self.current_time;
+
     def update(self):
         #First we receive data ....
+        self.current_time = self.message_system.get_time();
         for i in range(min(self.receive_speed, len(self.receive_queue))):
             received_data = self.receive_queue.pop(0);
-            if received_data.receiver_id != received_data.final_receiver_id:
+            if received_data.deadline > self.current_time:
+                continue;
+            elif received_data.receiver_id != received_data.final_receiver_id:
                 #This means we need to transfer data ...
                 self.transfer_packet(received_data);
                 self.log_data(received_data.data_type, ", Send Time: "+ str(received_data.send_time) + ", Current Time: " + str(self.current_time), "Sender: " + received_data.sender_id)                    
-                continue;
-            if received_data.data_type == message_type.DATA:
+            elif received_data.data_type == message_type.DATA:
                 if received_data.ack is True:
                     #Broadcasts do not receive acknowledgements 
                     self.send_packet(self.create_ack_packet(received_data));
@@ -127,7 +143,8 @@ class packet_system:
                     self.log_data(message_type.ACK, ", Send Time: "+ str(received_data.send_time) + ", Current Time: " + str(self.current_time), "Sender: " + received_data.sender_id)                    
         #Now after we handled all the received data we can handle 
         #We must handle the data with acknowledgement we have not received which is past the deadline ... 
-        for item in self.ack_wait_queue.keys():
+        key_list = list(self.ack_wait_queue.keys());
+        for item in key_list:
             if self.ack_wait_queue[item].deadline < self.current_time:
                 #Thus, this item can no longer be send and has failed ... 
                 old_packet = self.ack_wait_queue.pop(item);
@@ -144,7 +161,6 @@ class packet_system:
                 self.message_system.broadcast_packet(new_packet);
             else:
                 self.message_system.unicast_packet(new_packet);
-        self.current_time += self.time_decay;
 
 
 
