@@ -118,11 +118,14 @@ class messaging_system:
             return;
         queue.add_message(packet);  
 
-    def get_data_packets(self, sender_id, task_id, data_size, receiver_id, deadline):
+    def get_data_packets(self, sender_id, task_id, data_size, receiver_id, deadline):            
         system = self.get_packet_system(sender_id);
         if system == None:
             return;
         data_packet_list = system.get_upload_packets(task_id, data_size, sender_id, receiver_id, deadline);
+        # if sender_id == "GLOBAL_DATA":
+        #     print("OI VEY")
+        #     data_packet_list[0].print_packet();
         for packet in data_packet_list:
             # if data_size > 2000:
             self.schedule_packet(packet);

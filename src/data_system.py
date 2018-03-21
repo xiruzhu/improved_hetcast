@@ -75,6 +75,11 @@ class decaying_data_system:
         self.global_system = global_system;
         self.wireless_system = wireless_system;
 
+    def get_item(self, data_id):
+        if data_id in self.data_item_dict:
+            return self.data_item_dict[data_id];
+        return None;
+
     def get_distance(self, position):
         return math.sqrt(abs(position[0] - self.location[0]) ** 2 + abs(position[1] - self.location[1]) ** 2)
 
@@ -149,6 +154,11 @@ class complete_data_system:
                 position[1] += map_size[1]/grid_size[1];
             position[0] += map_size[0]/grid_size[0];
     
+    def get_global_no_decay_item(self, data_id):
+        if data_id in self.data_item_dict:
+            return self.data_item_dict[data_id];
+        return None;
+
     def add_data_item(self, data_item):
         for mat_list in self.decay_system_mat:
             for system in mat_list:
@@ -199,10 +209,7 @@ class vehicle_data_system:
         self.time_decay = time_decay;
 
     def get_data(self, data_id):
-        if data_id in self.data_item_dict:
-            return self.data_item_dict[data_id];
-        else:
-            return None;
+        return self.global_data_system.get_global_no_decay_item(data_id);
 
     def receive_request_packet(self, packet):
         requested_item = self.get_data(packet.request["data_id"]);
@@ -272,7 +279,6 @@ class fixed_data_system(vehicle_data_system):
     def __init__(self, network_access_node, global_data_system, current_time, time_decay=0.1, data_request_rate=0, status_size=1000, deadline_range=[5, 200]):
         self.current_time = current_time;
         self.network_access_node = network_access_node;
-        self.data_item_dict = {};
         self.global_data_system = global_data_system;
         self.status_size = status_size;
         self.failures = 0;
@@ -280,6 +286,9 @@ class fixed_data_system(vehicle_data_system):
         self.deadline_range = deadline_range;        
         self.time_decay = time_decay;    
     #Note we send status messages once every second
+    #Fixed data node doesn't return data ... 
+    def get_data(self):
+        return None;
 
     def update(self):
         self.current_time = self.network_access_node.get_time();
@@ -288,7 +297,6 @@ class global_data_system(vehicle_data_system):
     def __init__(self, network_access_node, global_data_system, current_time, data_rate=50, time_decay=0.1, data_request_rate=25, status_size=1000, deadline_range=[5, 200]):
         self.current_time = current_time;
         self.network_access_node = network_access_node;
-        self.data_item_dict = {};
         self.global_data_system = global_data_system;
         self.failures = 0;
         self.success = 0;
@@ -297,7 +305,13 @@ class global_data_system(vehicle_data_system):
         self.time_decay = time_decay;    
         self.data_rate = data_rate * time_decay;
     #Note we send status messages once every second
-    
+
+    def get_data(self, data_id):
+        if data_id in self.data_item_dict:
+            return self.data_item_dict[data_id];
+        else:
+            return None;
+
     def update(self):
         self.current_time = self.network_access_node.get_time();
         data_rate = self.data_rate;

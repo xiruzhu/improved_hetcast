@@ -94,8 +94,6 @@ class network_access_point:
         return (current_position[0] - position[0]) ** 2 + (current_position[0] - position[0]) ** 2;
 
     def receive_data_packet(self, packet):
-        if self.get_id() == "GLOBAL_DATA":
-            print(packet.print_packet());
         if packet.task_id in self.task_queue:
             self.task_queue[packet.task_id].set_packet_received(packet);
 
@@ -145,7 +143,7 @@ class global_network_node(network_access_point):
         #Thus, given this packet, we can deliver now without any regards ...
         
         #At the global level, find the RSU/LTE closest to the target to send ... 
-        # print("WAS here global")
+        #print("WAS here global")
         # print("\n\n", self.get_id())
         packet.print_packet();
         if self.wireless_system.is_fixed_node(packet.final_receiver_id):

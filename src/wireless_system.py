@@ -56,6 +56,8 @@ class wireless_system:
             return map_points[0][1];
 
     def schedule_packet(self, packet):
+        if packet.original_sender_id == "GLOBAL_NODE" and packet.request == None:
+            print("RECEIVED LOUD AND CLEAR. ")
         #First, find which network node is necessary
         if packet.sender_id in self.fixed_network_access:
             network_node = self.fixed_network_access[packet.sender_id]
