@@ -15,7 +15,8 @@ import traci.constants as tc
 PORT = 8813
 traci.init(PORT)
 simulation = wireless_system(traci, simulation_time=0);
-for i in range(200):
-    simulation.update();
+for j in range(20):
+    for i in range(200):
+        simulation.update();
+    simulation.print_task_rates();
 
-simulation.print_task_rates();

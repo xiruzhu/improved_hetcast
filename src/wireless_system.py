@@ -56,7 +56,7 @@ class wireless_system:
             return map_points[0][1];
 
     def schedule_packet(self, packet):
-        if packet.original_sender_id == "GLOBAL_NODE" and packet.request == None:
+        if packet.original_sender_id == "GLOBAL_NODE":
             print("RECEIVED LOUD AND CLEAR. ")
         #First, find which network node is necessary
         if packet.sender_id in self.fixed_network_access:
@@ -147,7 +147,7 @@ class wireless_system:
         for network_node in self.fixed_network_access:
             self.fixed_network_access[network_node].update();
 
-    def update_vehicle_dict(self):
+    def update_vehicle_node(self):
         new_vehicle_dict = {};
         for vehicle_id in self.updated_vehicle_id_list:
             if vehicle_id in self.vehicle_network_access:
@@ -168,13 +168,13 @@ class wireless_system:
     def get_time(self):
         return self.current_time;
 
-
     def update(self):
         if math.ceil(self.current_time) - self.current_time < self.time_decay:
             self.traci.simulationStep();
             self.updated_vehicle_id_list = self.traci.vehicle.getIDList();
         self.complete_data_system.update();
         self.update_fixed_nodes();
-        self.update_vehicle_dict();
-        self.message_system.update();
+        self.update_vehicle_node();
+        #self.message_system.update();
         self.current_time += self.time_decay;
+        print("Time: ", self.current_time);

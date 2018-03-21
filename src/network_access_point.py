@@ -145,7 +145,6 @@ class global_network_node(network_access_point):
         #At the global level, find the RSU/LTE closest to the target to send ... 
         #print("WAS here global")
         # print("\n\n", self.get_id())
-        packet.print_packet();
         if self.wireless_system.is_fixed_node(packet.final_receiver_id):
             #Directly send the packet to target
             packet.receiver_id = packet.final_receiver_id;
@@ -154,7 +153,7 @@ class global_network_node(network_access_point):
         elif self.wireless_system.is_vehicle_node(packet.final_receiver_id):
             #We have to find the rsu closests ... 
             sorted_list = self.wireless_system.map_system.get_access_points_in_range(self.wireless_system.get_node_position(packet.final_receiver_id));
-            if len(sorted_list > 0):
+            if len(sorted_list) > 0:
                 packet.receiver_id = sorted_list[0][1]; #Set the receiver id to the closest access node
                 self.wireless_system.add_packet_to_send_queue(packet);
 

@@ -123,7 +123,7 @@ class decaying_data_system:
         return None;
 
 class complete_data_system:
-    def __init__(self, current_time, wireless_system, map_size=(32000, 32000), grid_size=(5, 5), global_data_system_size=250000, value_decay=0.3, time_decay=0.01):
+    def __init__(self, current_time, wireless_system, map_size=(32000, 32000), grid_size=(3, 3), global_data_system_size=250000, value_decay=0.3, time_decay=0.01):
         self.map_size = map_size;
         self.grid_size = grid_size;
         self.current_time = current_time;
@@ -155,9 +155,7 @@ class complete_data_system:
             position[0] += map_size[0]/grid_size[0];
     
     def get_global_no_decay_item(self, data_id):
-        if data_id in self.data_item_dict:
-            return self.data_item_dict[data_id];
-        return None;
+        return self.global_data_system.get_item(data_id);
 
     def add_data_item(self, data_item):
         for mat_list in self.decay_system_mat:
@@ -197,7 +195,7 @@ class vehicle_data_system:
     #This message can be considered of size low
     #Furthermore, the system stores data available ... 
     
-    def __init__(self, network_access_node, global_data_system, current_time, global_data_rate=0.40, local_data_rate=0.20, time_decay=0.1, data_request_rate=1, status_size=1000, deadline_range=[8, 200]):
+    def __init__(self, network_access_node, global_data_system, current_time, global_data_rate=0.20, local_data_rate=0.10, time_decay=0.1, data_request_rate=1, status_size=1000, deadline_range=[8, 200]):
         self.current_time = current_time;
         self.network_access_node = network_access_node;
         self.data_item_dict = {};
@@ -209,7 +207,10 @@ class vehicle_data_system:
         self.time_decay = time_decay;
 
     def get_data(self, data_id):
-        return self.global_data_system.get_global_no_decay_item(data_id);
+        if data_id in self.data_item_dict:
+            return self.data_item_dict[data_id];
+        else:
+            return None;
 
     def receive_request_packet(self, packet):
         requested_item = self.get_data(packet.request["data_id"]);
@@ -294,7 +295,7 @@ class fixed_data_system(vehicle_data_system):
         self.current_time = self.network_access_node.get_time();
 
 class global_data_system(vehicle_data_system):
-    def __init__(self, network_access_node, global_data_system, current_time, data_rate=50, time_decay=0.1, data_request_rate=25, status_size=1000, deadline_range=[5, 200]):
+    def __init__(self, network_access_node, global_data_system, current_time, data_rate=50, time_decay=0.1, data_request_rate=5, status_size=1000, deadline_range=[5, 200]):
         self.current_time = current_time;
         self.network_access_node = network_access_node;
         self.global_data_system = global_data_system;
@@ -307,10 +308,7 @@ class global_data_system(vehicle_data_system):
     #Note we send status messages once every second
 
     def get_data(self, data_id):
-        if data_id in self.data_item_dict:
-            return self.data_item_dict[data_id];
-        else:
-            return None;
+        return self.global_data_system.get_global_no_decay_item(data_id);
 
     def update(self):
         self.current_time = self.network_access_node.get_time();

@@ -31,6 +31,7 @@ class packet:
         print("Data Type: ", self.data_type);
         print("Deadline: ", self.deadline);
         print("Request: ", self.request);
+        print("Num packets: ", self.num_packets)
 
     def clone(self):
         return packet(self.sender_id, self.original_sender_id, self.receiver_id, self.final_receiver_id, 

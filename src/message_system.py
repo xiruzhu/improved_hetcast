@@ -68,7 +68,7 @@ class messaging_system:
                 self.fixed_packet_systems[key] = packet_system(key, wireless_system, self, time_decay=time_decay, up_speed=lte_upload, down_speed=lte_down);
             else:
                 self.fixed_packet_systems[key] = packet_system(key, wireless_system, self, time_decay=time_decay, up_speed=rsu_upload, down_speed=rsu_down);
-        self.fixed_packet_systems["GLOBAL_DATA"] = packet_system(key, wireless_system, self, time_decay=time_decay, up_speed=lte_upload * 10000, down_speed=lte_down * 10000);
+        self.fixed_packet_systems["GLOBAL_DATA"] = packet_system("GLOBAL_DATA", wireless_system, self, time_decay=time_decay, up_speed=lte_upload * 10000, down_speed=lte_down * 10000);
         self.vehicle_packet_systems = {};
         #Update everything ... 
         self.update();
@@ -123,11 +123,7 @@ class messaging_system:
         if system == None:
             return;
         data_packet_list = system.get_upload_packets(task_id, data_size, sender_id, receiver_id, deadline);
-        # if sender_id == "GLOBAL_DATA":
-        #     print("OI VEY")
-        #     data_packet_list[0].print_packet();
         for packet in data_packet_list:
-            # if data_size > 2000:
             self.schedule_packet(packet);
 
     def get_request_packet(self, sender_id, task_id, data_size, request, receiver_id, deadline):
