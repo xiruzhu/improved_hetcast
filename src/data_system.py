@@ -211,7 +211,7 @@ class vehicle_data_system:
             return;
         data_size = packet.request["data_size"];     
         deadline = packet.request["deadline"];
-        self.network_access_node.upload_data(self.network_access_node.get_id() ,"data:" + self.network_access_node.get_id() + ":" + str(self.current_time), data_size, packet.sender_id, deadline);
+        self.network_access_node.upload_data(self.network_access_node.get_id() ,"data:" + self.network_access_node.get_id() + ":" + str(self.current_time), data_size, packet.original_sender_id, deadline);
 
     def select_data(self, local=False, decayed=False):
         if local:
@@ -269,7 +269,7 @@ class vehicle_data_system:
                 break;
 
 class fixed_data_system(vehicle_data_system):
-    def __init__(self, network_access_node, global_data_system, current_time, time_decay=0.1, data_request_rate=1, status_size=1000, deadline_range=[5, 200]):
+    def __init__(self, network_access_node, global_data_system, current_time, time_decay=0.1, data_request_rate=0, status_size=1000, deadline_range=[5, 200]):
         self.current_time = current_time;
         self.network_access_node = network_access_node;
         self.data_item_dict = {};

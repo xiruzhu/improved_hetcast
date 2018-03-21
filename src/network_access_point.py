@@ -94,6 +94,8 @@ class network_access_point:
         return (current_position[0] - position[0]) ** 2 + (current_position[0] - position[0]) ** 2;
 
     def receive_data_packet(self, packet):
+        if self.get_id() == "GLOBAL_DATA":
+            print(packet.print_packet());
         if packet.task_id in self.task_queue:
             self.task_queue[packet.task_id].set_packet_received(packet);
 
@@ -144,9 +146,11 @@ class global_network_node(network_access_point):
         
         #At the global level, find the RSU/LTE closest to the target to send ... 
         # print("WAS here global")
-        # packet.print_packet();
+        # print("\n\n", self.get_id())
+        packet.print_packet();
         if self.wireless_system.is_fixed_node(packet.final_receiver_id):
             #Directly send the packet to target
+            packet.receiver_id = packet.final_receiver_id;
             self.wireless_system.add_packet_to_send_queue(packet);
         #For vehicles
         elif self.wireless_system.is_vehicle_node(packet.final_receiver_id):
@@ -186,19 +190,23 @@ class fixed_network_node(network_access_point):
         #Thus, given this packet, we can deliver now without any regards ...
         #At the LTE/RSU level, check if target is fixed node ... 
         # print("WAS here LTE")
-        # packet.print_packet();
+        #print("\n\n\n" + self.get_id());
+        #packet.print_packet();
         if self.wireless_system.is_fixed_node(packet.final_receiver_id):
             #Directly send the packet to target
+            packet.receiver_id = packet.final_receiver_id;
             self.wireless_system.add_packet_to_send_queue(packet);
         #For vehicles
         elif self.wireless_system.is_vehicle_node(packet.final_receiver_id):
             #If in range
             position = self.wireless_system.get_node_position(packet.final_receiver_id);
             if self.get_distance(position) < self.wireless_range ** 2:
+                #print("Sending data directly to vehicle")
                 packet.receiver_id = packet.final_receiver_id;
                 self.wireless_system.add_packet_to_send_queue(packet);
             else:
                 #Send to global to process ... 
+                #print("Sending data directly to global")
                 packet.receiver_id = "GLOBAL_DATA";
                 self.wireless_system.add_packet_to_send_queue(packet);
 
@@ -231,7 +239,6 @@ class vehicle_network_node(network_access_point):
         #Given this is the naive algorithm, we schedule packets the moment we receive the requests
         #Thus, given this packet, we can deliver now without any regards ...
         #For vehicles, if within range of vehicle ... 
-        # packet.print_packet();
         if self.wireless_system.is_vehicle_node(packet.final_receiver_id):
             #If in range, use vehicular network to directly send data ... 
             position = self.wireless_system.get_node_position(packet.final_receiver_id);
@@ -239,9 +246,7 @@ class vehicle_network_node(network_access_point):
                 packet.receiver_id = packet.final_receiver_id;
                 self.wireless_system.add_packet_to_send_queue(packet);
                 return;
-        target_node_location = self.wireless_system.get_node_position(packet.final_receiver_id);
-        if target_node_location == None:
-            return;
+        target_node_location = self.get_location();
         sorted_list = self.wireless_system.map_system.get_access_points_in_range(target_node_location);
         if len(sorted_list) == 0:
             return;

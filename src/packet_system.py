@@ -30,14 +30,15 @@ class packet:
         print("Task ID:", self.task_id);
         print("Data Type: ", self.data_type);
         print("Deadline: ", self.deadline);
-        print(self.request);
+        print("Request: ", self.request);
 
     def clone(self):
         return packet(self.sender_id, self.original_sender_id, self.receiver_id, self.final_receiver_id, 
-        self.task_id, self.send_time, self.seq_num, self.deadline, self.data_type, self.request); 
+        self.task_id, self.send_time, self.seq_num, self.deadline, self.data_type,
+        self.request, num_packets=self.num_packets); 
 
 class packet_system:
-    def __init__(self, system_id, wireless_system, message_system, log_dir="../logs/", time_decay=0.1, up_speed=1000, down_speed=1000,current_time=0, packet_size=2000, resend_rate=3):
+    def __init__(self, system_id, wireless_system, message_system, log_dir="../logs/", time_decay=0.1, up_speed=1000, down_speed=1000,current_time=0, packet_size=2000, resend_rate=5):
         self.packet_size=packet_size;
         self.sequence_number = 0;
         self.task_number = 0;
@@ -93,21 +94,21 @@ class packet_system:
         log_file.close();
 
     def create_data_packet(self, original_receiver_id, receiver_id, final_receiver_id, task_id, deadline, num_packets, data_type=message_type.DATA):
-        new_packet = packet(self.system_id, original_receiver_id, receiver_id, final_receiver_id, task_id, deadline, self.current_time, self.sequence_number, num_packets, data_type);
+        new_packet = packet(self.system_id, original_receiver_id, receiver_id, final_receiver_id, task_id, self.current_time, self.sequence_number, deadline, data_type=data_type, num_packets=num_packets);
         self.sequence_number += 1;
         if self.sequence_number % 2147483647 == 0:
             self.sequence_number = 0;
         return new_packet;
 
     def create_req_packet(self, original_receiver_id, receiver_id, final_receiver_id, task_id, request, deadline, data_type=message_type.REQ):
-        new_packet = packet(self.system_id, original_receiver_id, receiver_id, final_receiver_id, task_id, deadline, self.current_time, self.sequence_number, data_type, request=request);
+        new_packet = packet(self.system_id, original_receiver_id, receiver_id, final_receiver_id, task_id, self.current_time, self.sequence_number, deadline, data_type, request=request);
         self.sequence_number += 1;
         if self.sequence_number % 2147483647 == 0:
             self.sequence_number = 0;
         return new_packet;
 
     def create_ack_packet(self, received_packet):
-        new_packet = packet(self.system_id, self.system_id, received_packet.sender_id, received_packet.sender_id, received_packet.task_id, self.resend_rate, self.current_time, received_packet.seq_num, data_type=message_type.ACK);
+        new_packet = packet(self.system_id, self.system_id, received_packet.sender_id, received_packet.sender_id, received_packet.task_id, self.current_time, received_packet.seq_num, self.current_time + self.resend_rate, data_type=message_type.ACK);
         return new_packet;
 
     def get_time(self):
@@ -118,7 +119,8 @@ class packet_system:
         self.current_time = self.message_system.get_time();
         for i in range(min(self.receive_speed, len(self.receive_queue))):
             received_data = self.receive_queue.pop(0);
-            if received_data.deadline > self.current_time:
+            #print(received_data.print_packet())
+            if received_data.deadline < self.current_time:
                 continue;
             elif received_data.receiver_id != received_data.final_receiver_id:
                 #This means we need to transfer data ...

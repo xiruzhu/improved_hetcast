@@ -30,7 +30,7 @@ class message_queue:
         self.message_queue[new_id] = packet;
 
     def update(self):
-        self.current_time = message_system.get_time();
+        self.current_time = self.message_system.get_time();
         packets_to_send = [];
         for packet in self.message_queue:
             self.message_queue[packet].delay_value -= self.time_decay;
@@ -58,7 +58,7 @@ class messaging_system:
             self.fixed_message_queues[access_node.access_id] = message_queue(current_time, time_decay, self);
         for access_node in self.wireless_system.lte_list:
             self.fixed_message_queues[access_node.access_id] = message_queue(current_time, time_decay, self);
-        
+        self.fixed_message_queues["GLOBAL_DATA"] = message_queue(current_time, time_decay, self);
         #This list does change if it goes down
         self.vehicle_message_queues = {};
         #Next We must keep track of all the packet system
@@ -68,6 +68,7 @@ class messaging_system:
                 self.fixed_packet_systems[key] = packet_system(key, wireless_system, self, time_decay=time_decay, up_speed=lte_upload, down_speed=lte_down);
             else:
                 self.fixed_packet_systems[key] = packet_system(key, wireless_system, self, time_decay=time_decay, up_speed=rsu_upload, down_speed=rsu_down);
+        self.fixed_packet_systems["GLOBAL_DATA"] = packet_system(key, wireless_system, self, time_decay=time_decay, up_speed=lte_upload * 10000, down_speed=lte_down * 10000);
         self.vehicle_packet_systems = {};
         #Update everything ... 
         self.update();
@@ -122,9 +123,8 @@ class messaging_system:
         if system == None:
             return;
         data_packet_list = system.get_upload_packets(task_id, data_size, sender_id, receiver_id, deadline);
-        #print("------------------------------------------")
-        #print("WAS HERE 3",len(self.vehicle_message_queues))
         for packet in data_packet_list:
+            # if data_size > 2000:
             self.schedule_packet(packet);
 
     def get_request_packet(self, sender_id, task_id, data_size, request, receiver_id, deadline):
@@ -176,10 +176,5 @@ class messaging_system:
         count = 0;
         for key in self.vehicle_packet_systems:
             self.vehicle_message_queues[key].update();
-            if count == 0:
-                print(key, self.vehicle_packet_systems[key].current_time, self.current_time);
             self.vehicle_packet_systems[key].update();
-            if count == 0:
-                print(key, self.vehicle_packet_systems[key].current_time, self.current_time);
-                count += 1;
 

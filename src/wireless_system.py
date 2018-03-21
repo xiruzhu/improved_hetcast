@@ -13,7 +13,7 @@ class node_type(Enum):
     LTE = 2
 
 class wireless_system:
-    def __init__(self, traci, map_size=(32000, 32000), time_decay=0.125, simulation_time=1200, random_seed=0):
+    def __init__(self, traci, map_size=(32000, 32000), time_decay=0.5, simulation_time=1200, random_seed=0):
         self.current_time = 0;
         self.map_size = map_size;
         self.time_decay = time_decay;
