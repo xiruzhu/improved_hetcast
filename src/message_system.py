@@ -7,7 +7,7 @@ import numpy as np
 import time
 
 class message_queue:
-    def __init__(self, current_time, time_decay, message_system, message_delay=[0.2, 1]):
+    def __init__(self, current_time, time_decay, message_system, message_delay=[0.1, 0.5]):
         self.current_time = current_time;
         self.time_decay = time_decay;
         self.message_delay = message_delay;

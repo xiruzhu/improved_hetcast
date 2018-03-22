@@ -61,7 +61,7 @@ class network_access_point:
             elif self.task_queue[item].outcome == task_outcome.FAILED:
                 self.task_queue.pop(item);
                 self.num_failed_task += 1;
-            elif self.task_queue[item].deadline > self.current_time:
+            elif self.task_queue[item].deadline < self.current_time:
                 self.task_queue.pop(item);
                 self.num_failed_task += 1;
 
@@ -94,6 +94,10 @@ class network_access_point:
         return (current_position[0] - position[0]) ** 2 + (current_position[0] - position[0]) ** 2;
 
     def receive_data_packet(self, packet):
+        #packet.print_packet()
+        # if self.get_id() == "GLOBAL_DATA":
+        #     packet.print_packet();
+        #     print(self.task_queue.keys())
         if packet.task_id in self.task_queue:
             self.task_queue[packet.task_id].set_packet_received(packet);
 

@@ -219,7 +219,7 @@ class vehicle_data_system:
             return;
         data_size = packet.request["data_size"];     
         deadline = packet.request["deadline"];
-        self.network_access_node.upload_data(self.network_access_node.get_id() ,"data:" + self.network_access_node.get_id() + ":" + str(self.current_time), data_size, packet.original_sender_id, deadline);
+        self.network_access_node.upload_data(self.network_access_node.get_id() , packet.task_id, data_size, packet.original_sender_id, deadline);
 
     def select_data(self, local=False, decayed=False):
         if local:
