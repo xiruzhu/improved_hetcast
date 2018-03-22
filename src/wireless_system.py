@@ -6,31 +6,31 @@ from data_system import complete_data_system
 import numpy as np 
 import math
 from network_access_point import fixed_network_node, vehicle_network_node, global_network_node
-
+import time
 class node_type(Enum):
     VEHICLE = 0
     RSU = 1
     LTE = 2
 
 class wireless_system:
-    def __init__(self, traci, map_size=(32000, 32000), time_decay=0.5, simulation_time=1200, random_seed=0):
+    def __init__(self, traci, map_size=(32000, 32000), time_decay=0.25, simulation_time=1200, random_seed=0, packet_size=2000):
         self.current_time = 0;
         self.map_size = map_size;
         self.time_decay = time_decay;
         self.traci = traci;
-
+        self.packet_size = packet_size;
         #seed the random seed to constant to prevent too much randomness
         np.random.seed(random_seed);
         #skip initial simulation time 
         for i in range(simulation_time):
             self.traci.simulationStep();
-        self.current_time = simulation_time + 1;
+        self.current_time = simulation_time;
         self.updated_vehicle_id_list = self.traci.vehicle.getIDList();
 
         #Initialize the map system ... 
         self.map_system = map_system(levels=3, drop=5);
-        self.add_lte();
-        self.add_rsu();
+        self.add_lte(num_lte=20);
+        self.add_rsu(num_rsu=40);
         self.updated_vehicle_id_list = self.traci.vehicle.getIDList();
         #Vehicle list ... 
         self.message_system = messaging_system(self.traci, self, self.current_time, time_decay=self.time_decay);
@@ -38,10 +38,10 @@ class wireless_system:
 
         self.fixed_network_access = {};
         for access_node in self.rsu_list:
-            self.fixed_network_access[access_node.get_id()] = fixed_network_node(access_node, self, self.complete_data_system, self.traci, self.current_time, time_decay=time_decay);
+            self.fixed_network_access[access_node.get_id()] = fixed_network_node(access_node, self, self.complete_data_system, self.traci, self.current_time, time_decay=time_decay, packet_size=packet_size);
         for access_node in self.lte_list:
-            self.fixed_network_access[access_node.get_id()] = fixed_network_node(access_node, self, self.complete_data_system, self.traci, self.current_time, time_decay=time_decay);
-        self.fixed_network_access["GLOBAL_DATA"] = global_network_node(self, self.complete_data_system, self.traci, self.current_time, time_decay=time_decay)
+            self.fixed_network_access[access_node.get_id()] = fixed_network_node(access_node, self, self.complete_data_system, self.traci, self.current_time, time_decay=time_decay, packet_size=packet_size);
+        self.fixed_network_access["GLOBAL_DATA"] = global_network_node(self, self.complete_data_system, self.traci, self.current_time, time_decay=time_decay, packet_size=packet_size)
         self.vehicle_network_access = {};
         self.update();
         
@@ -69,6 +69,9 @@ class wireless_system:
         network_node.schedule_packet(packet);
 
     def add_packet_to_send_queue(self, packet):
+        if packet.receiver_id == None:
+            packet.print_packet();
+            raise ValueError("WHAT")
         self.message_system.add_packet_to_send_queue(packet);
 
     def get_data_packets(self, sender_id, task_id, data_size, receiver_id, deadline):
@@ -154,7 +157,7 @@ class wireless_system:
                 new_vehicle_dict[vehicle_id] = self.vehicle_network_access[vehicle_id];
                 new_vehicle_dict[vehicle_id].update();
             else:
-                new_vehicle_dict[vehicle_id] = vehicle_network_node(vehicle_id, self, self.complete_data_system, self.traci, self.current_time, time_decay=self.time_decay);
+                new_vehicle_dict[vehicle_id] = vehicle_network_node(vehicle_id, self, self.complete_data_system, self.traci, self.current_time, time_decay=self.time_decay, packet_size=self.packet_size);
         self.vehicle_network_access = new_vehicle_dict;
 
     def print_task_rates(self):
@@ -172,9 +175,11 @@ class wireless_system:
         if math.ceil(self.current_time) - self.current_time < self.time_decay:
             self.traci.simulationStep();
             self.updated_vehicle_id_list = self.traci.vehicle.getIDList();
-        self.complete_data_system.update();
-        self.update_fixed_nodes();
+        self.complete_data_system.update();       
+        self.update_fixed_nodes();      
         self.update_vehicle_node();
-        #self.message_system.update();
+        current_time = time.time();
+        self.message_system.update();
+        print("Runtime 5: ", time.time() - current_time)
         self.current_time += self.time_decay;
-        print("Time: ", self.current_time);
+        print("Time: ", self.current_time, self.message_system.packet_scheduled);

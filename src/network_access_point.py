@@ -149,14 +149,16 @@ class global_network_node(network_access_point):
             #Directly send the packet to target
             packet.receiver_id = packet.final_receiver_id;
             self.wireless_system.add_packet_to_send_queue(packet);
+            return;
         #For vehicles
         elif self.wireless_system.is_vehicle_node(packet.final_receiver_id):
             #We have to find the rsu closests ... 
             sorted_list = self.wireless_system.map_system.get_access_points_in_range(self.wireless_system.get_node_position(packet.final_receiver_id));
+            #packet.print_packet();
             if len(sorted_list) > 0:
                 packet.receiver_id = sorted_list[0][1]; #Set the receiver id to the closest access node
                 self.wireless_system.add_packet_to_send_queue(packet);
-
+                return;
     def update(self):
         self.data_system.update();
         self.update_tasks();  
@@ -193,6 +195,7 @@ class fixed_network_node(network_access_point):
             #Directly send the packet to target
             packet.receiver_id = packet.final_receiver_id;
             self.wireless_system.add_packet_to_send_queue(packet);
+            return;
         #For vehicles
         elif self.wireless_system.is_vehicle_node(packet.final_receiver_id):
             #If in range
@@ -201,11 +204,13 @@ class fixed_network_node(network_access_point):
                 #print("Sending data directly to vehicle")
                 packet.receiver_id = packet.final_receiver_id;
                 self.wireless_system.add_packet_to_send_queue(packet);
+                return;
             else:
                 #Send to global to process ... 
                 #print("Sending data directly to global")
                 packet.receiver_id = "GLOBAL_DATA";
                 self.wireless_system.add_packet_to_send_queue(packet);
+                return;
 
     def update(self):
         self.data_system.update();
@@ -249,6 +254,7 @@ class vehicle_network_node(network_access_point):
             return;
         packet.receiver_id = sorted_list[0][1];
         self.wireless_system.add_packet_to_send_queue(packet);
+        return;
 
     def get_time(self):
         return self.current_time;

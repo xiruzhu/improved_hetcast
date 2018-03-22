@@ -1,6 +1,7 @@
 #Packet Object ... 
 from enum import Enum
 from functools import total_ordering
+from collections import deque
 
 class message_type(Enum):
     ACK = 0
@@ -54,8 +55,8 @@ class packet_system:
 
         self.send_speed = up_speed;
         self.receive_speed = down_speed;
-        self.receive_queue = [];
-        self.send_queue = [];
+        self.receive_queue = deque();
+        self.send_queue = deque();
         self.ack_wait_queue = {};
         self.log_file = log_dir + system_id + ".txt";
         log_file = open(self.log_file, "w");
@@ -119,8 +120,7 @@ class packet_system:
         #First we receive data ....
         self.current_time = self.message_system.get_time();
         for i in range(min(self.receive_speed, len(self.receive_queue))):
-            received_data = self.receive_queue.pop(0);
-            #print(received_data.print_packet())
+            received_data = self.receive_queue.pop();
             if received_data.deadline < self.current_time:
                 continue;
             elif received_data.receiver_id != received_data.final_receiver_id:
@@ -144,6 +144,7 @@ class packet_system:
                 if ack_id in self.ack_wait_queue:
                     self.ack_wait_queue.pop(ack_id);
                     self.log_data(message_type.ACK, ", Send Time: "+ str(received_data.send_time) + ", Current Time: " + str(self.current_time), "Sender: " + received_data.sender_id)                    
+        
         #Now after we handled all the received data we can handle 
         #We must handle the data with acknowledgement we have not received which is past the deadline ... 
         key_list = list(self.ack_wait_queue.keys());
@@ -155,11 +156,11 @@ class packet_system:
                 #We need to resend the data as we did not receive the acknowledgement ....  
                 old_packet = self.ack_wait_queue.pop(item);
                 old_packet.send_time = self.current_time;
-                self.send_packet(old_packet);
+                self.transfer_packet(old_packet);
             #otherwise just wait for it to finish
         #Finally, we must handle sending data
         for i in range(min(self.send_speed, len(self.send_queue))):
-            new_packet = self.send_queue.pop(0);
+            new_packet = self.send_queue.pop();
             if new_packet.ack == False:
                 self.message_system.broadcast_packet(new_packet);
             else:

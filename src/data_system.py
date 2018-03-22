@@ -113,13 +113,13 @@ class decaying_data_system:
                 self.dist_freq.append(self.data_item_dict[item[1]]);
             self.item_added_flag = False;
              
-    def select_item(self):
-        if len(self.dist_freq) > 0:
+    def select_item(self, minimum=1, attempts=3):
+        if len(self.dist_freq) >= minimum:
         #Select data based on a zipf distribution .... 
-            zipf_index = len(self.dist_freq)
-            while not zipf_index < len(self.dist_freq):
-                zipf_index = np.random.zipf(1.1);
-            return self.dist_freq[zipf_index];
+            zipf_index = np.random.zipf(1.2);
+            for i in range(attempts):
+                if len(self.dist_freq) > zipf_index:
+                    return self.dist_freq[zipf_index];
         return None;
 
 class complete_data_system:
@@ -230,7 +230,7 @@ class vehicle_data_system:
             else:
                 data_need = self.global_data_system.select_data_global();
         if data_need is None:
-            return;
+            return None;
         if not data_need.check_origin(self.network_access_node.get_id()):
             data_size = np.random.randint(0, 4);
             if data_size == 0:
@@ -245,36 +245,27 @@ class vehicle_data_system:
             deadline = np.random.uniform(self.deadline_range[0], self.deadline_range[1]) + self.current_time;
             request = {"data_id":data_need.data_id, "data_size":data_size, "deadline":deadline};
             self.network_access_node.request_data(self.network_access_node.get_id(), "request:" + self.network_access_node.get_id() + ":" + str(self.current_time), self.status_size, request, data_need.origin, deadline);
+        return data_need;
 
     #Note we send status messages once every second
     def update(self):
         self.current_time = self.network_access_node.get_time();
-        new_data_id = "data_id:" + self.network_access_node.get_id() + "," + str(self.current_time);
-        self.data_item_dict[new_data_id] = vehicular_data(self.network_access_node.get_id(), new_data_id, self.network_access_node.get_location());
-        self.global_data_system.add_data_item(self.data_item_dict[new_data_id]);
         if math.ceil(self.current_time) - self.current_time < self.time_decay:
+            new_data_id = "data_id:" + self.network_access_node.get_id() + "," + str(self.current_time);
+            self.data_item_dict[new_data_id] = vehicular_data(self.network_access_node.get_id(), new_data_id, self.network_access_node.get_location());
+            self.global_data_system.add_data_item(self.data_item_dict[new_data_id]);
             #Time to send a status message ... we can directly send data as such without need for scheduler ... 
-            deadline = np.random.uniform(self.deadline_range[0], self.deadline_range[1]) + self.current_time;
             local_rsu_id = self.network_access_node.get_local_access_node_id();
             if local_rsu_id != None:
+                deadline = np.random.uniform(self.deadline_range[0], self.deadline_range[1]) + self.current_time;
                 self.network_access_node.upload_data(self.network_access_node.get_id(),"status:" + self.network_access_node.get_id() + ":" + str(self.current_time), self.status_size, local_rsu_id, deadline);
-        
         data_rate = self.local_data_rate;
-        while data_rate > 0:
-            likelihood = np.random.ranf();
-            if likelihood <= data_rate:
-                self.select_data(True);
-                data_rate -= likelihood;
-            else:
-                break;
+        likelihood = np.random.ranf();
+        if likelihood <= data_rate:
+            self.select_data(True);
         data_rate = self.global_data_rate;
-        while data_rate > 0:
-            likelihood = np.random.ranf();
-            if likelihood <= data_rate:
-                self.select_data(False);
-                data_rate -= likelihood;
-            else:
-                break;
+        if likelihood <= data_rate:
+            self.select_data(True);
 
 class fixed_data_system(vehicle_data_system):
     def __init__(self, network_access_node, global_data_system, current_time, time_decay=0.1, data_request_rate=0, status_size=1000, deadline_range=[5, 200]):
@@ -295,7 +286,7 @@ class fixed_data_system(vehicle_data_system):
         self.current_time = self.network_access_node.get_time();
 
 class global_data_system(vehicle_data_system):
-    def __init__(self, network_access_node, global_data_system, current_time, data_rate=50, time_decay=0.1, data_request_rate=5, status_size=1000, deadline_range=[5, 200]):
+    def __init__(self, network_access_node, global_data_system, current_time, data_rate=25, time_decay=0.1, data_request_rate=5, status_size=1000, deadline_range=[5, 200]):
         self.current_time = current_time;
         self.network_access_node = network_access_node;
         self.global_data_system = global_data_system;

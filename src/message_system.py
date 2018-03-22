@@ -4,9 +4,10 @@ from packet_system import packet_system
 from data_system import complete_data_system
 import math
 import numpy as np
+import time
 
 class message_queue:
-    def __init__(self, current_time, time_decay, message_system, message_delay=[0.2, 0.2]):
+    def __init__(self, current_time, time_decay, message_system, message_delay=[0.2, 1]):
         self.current_time = current_time;
         self.time_decay = time_decay;
         self.message_delay = message_delay;
@@ -31,16 +32,14 @@ class message_queue:
 
     def update(self):
         self.current_time = self.message_system.get_time();
-        packets_to_send = [];
-        for packet in self.message_queue:
-            self.message_queue[packet].delay_value -= self.time_decay;
-            packets_to_send.append(packet)
-        for packet_id in packets_to_send:
-            self.message_system.transfer_to_packet_system(self.message_queue.pop(packet_id));
-
+        message_queue_key = list(self.message_queue.keys());
+        for key in message_queue_key:
+            self.message_queue[key].delay_value -= self.time_decay;
+            if self.message_queue[key].delay_value < 0:
+                self.message_system.transfer_to_packet_system(self.message_queue.pop(key));
 
 class messaging_system:
-    def __init__(self, traci, wireless_system, current_time, time_decay=0.1, num_lte=100, num_rsu=1000, lte_upload=20000, lte_down=10000, rsu_upload=20000, rsu_down=10000, veh_upload=100, veh_down=400):
+    def __init__(self, traci, wireless_system, current_time, time_decay=0.1, num_lte=100, num_rsu=1000, lte_upload=20000, lte_down=10000, rsu_upload=20000, rsu_down=10000, veh_upload=100, veh_down=400, packet_size=2000):
         #So in this system, we must keep track of all elements which can receive and send messages ... 
         self.wireless_system = wireless_system
         self.current_time = current_time;
@@ -52,6 +51,8 @@ class messaging_system:
         self.rsu_down = rsu_down;
         self.veh_upload = veh_upload;
         self.veh_down = veh_down;
+        self.packet_scheduled = 0;
+        self.packet_size = packet_size;
         #These two list does not change unless one of these go down
         self.fixed_message_queues = {};
         for access_node in self.wireless_system.rsu_list:
@@ -65,10 +66,10 @@ class messaging_system:
         self.fixed_packet_systems = {};
         for key in self.fixed_message_queues:
             if key in self.wireless_system.lte_list:
-                self.fixed_packet_systems[key] = packet_system(key, wireless_system, self, time_decay=time_decay, up_speed=lte_upload, down_speed=lte_down);
+                self.fixed_packet_systems[key] = packet_system(key, wireless_system, self, time_decay=time_decay, up_speed=lte_upload, down_speed=lte_down, packet_size=packet_size);
             else:
-                self.fixed_packet_systems[key] = packet_system(key, wireless_system, self, time_decay=time_decay, up_speed=rsu_upload, down_speed=rsu_down);
-        self.fixed_packet_systems["GLOBAL_DATA"] = packet_system("GLOBAL_DATA", wireless_system, self, time_decay=time_decay, up_speed=lte_upload * 10000, down_speed=lte_down * 10000);
+                self.fixed_packet_systems[key] = packet_system(key, wireless_system, self, time_decay=time_decay, up_speed=rsu_upload, down_speed=rsu_down, packet_size=packet_size);
+        self.fixed_packet_systems["GLOBAL_DATA"] = packet_system("GLOBAL_DATA", wireless_system, self, time_decay=time_decay, up_speed=lte_upload * 10000, down_speed=lte_down * 10000, packet_size=packet_size);
         self.vehicle_packet_systems = {};
         #Update everything ... 
         self.update();
@@ -98,6 +99,7 @@ class messaging_system:
         packet_sys.send_packet(packet);
 
     def schedule_packet(self, packet):
+        self.packet_scheduled += 1;
         self.wireless_system.schedule_packet(packet);
 
     def broadcast_packet(self, packet):
@@ -157,7 +159,7 @@ class messaging_system:
             if vehicle_id in self.vehicle_packet_systems:
                 new_vehicle_dict[vehicle_id] = self.vehicle_packet_systems[vehicle_id];
             else:
-                new_vehicle_dict[vehicle_id] = packet_system(vehicle_id, self.wireless_system, self, time_decay=self.time_decay, up_speed=self.veh_upload, down_speed=self.veh_down);
+                new_vehicle_dict[vehicle_id] = packet_system(vehicle_id, self.wireless_system, self, time_decay=self.time_decay, up_speed=self.veh_upload, down_speed=self.veh_down, packet_size=self.packet_size);
         self.vehicle_packet_systems = new_vehicle_dict;
 
     def get_time(self):
@@ -165,15 +167,20 @@ class messaging_system:
 
     def update(self):
         self.current_time = self.wireless_system.get_time();
+        current_time = time.time();
         if math.ceil(self.current_time) - self.current_time < self.time_decay:
             self.update_vehicle_message_queue();
             self.update_vehicle_packet_system();
+        print("Runtime 6: ", time.time() - current_time)
+        current_time = time.time();
         for key in self.fixed_packet_systems:
             self.fixed_message_queues[key].update();
             self.fixed_packet_systems[key].update();
-
-        count = 0;
+        print("Runtime 7: ", time.time() - current_time)
+        current_time = time.time();
         for key in self.vehicle_packet_systems:
             self.vehicle_message_queues[key].update();
             self.vehicle_packet_systems[key].update();
+        print("Runtime 8: ", time.time() - current_time)
+        current_time = time.time();
 
