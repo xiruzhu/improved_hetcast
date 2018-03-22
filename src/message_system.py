@@ -167,20 +167,13 @@ class messaging_system:
 
     def update(self):
         self.current_time = self.wireless_system.get_time();
-        current_time = time.time();
         if math.ceil(self.current_time) - self.current_time < self.time_decay:
             self.update_vehicle_message_queue();
             self.update_vehicle_packet_system();
-        print("Runtime 6: ", time.time() - current_time)
-        current_time = time.time();
         for key in self.fixed_packet_systems:
             self.fixed_message_queues[key].update();
             self.fixed_packet_systems[key].update();
-        print("Runtime 7: ", time.time() - current_time)
-        current_time = time.time();
         for key in self.vehicle_packet_systems:
             self.vehicle_message_queues[key].update();
             self.vehicle_packet_systems[key].update();
-        print("Runtime 8: ", time.time() - current_time)
-        current_time = time.time();
 

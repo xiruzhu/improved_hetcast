@@ -43,11 +43,11 @@ class vehicular_data:
     def get_data_size(self, data_type):
         result = self.base_data_size;
         if data_type == data_type.MID:
-            result *= 10;
+            result *= 5;
         elif data_type == data_type.HIG:
-            result *= 100;
+            result *= 25;
         elif data_type == data_type.HUG:
-            result *= 1000;
+            result *= 125;
         return result;
     
     def get_location(self):
@@ -195,7 +195,7 @@ class vehicle_data_system:
     #This message can be considered of size low
     #Furthermore, the system stores data available ... 
     
-    def __init__(self, network_access_node, global_data_system, current_time, global_data_rate=0.20, local_data_rate=0.10, time_decay=0.1, data_request_rate=1, status_size=1000, deadline_range=[8, 200]):
+    def __init__(self, network_access_node, global_data_system, current_time, global_data_rate=0.10, local_data_rate=0.20, time_decay=0.1, data_request_rate=1, status_size=1000, deadline_range=[8, 200]):
         self.current_time = current_time;
         self.network_access_node = network_access_node;
         self.data_item_dict = {};
@@ -286,7 +286,7 @@ class fixed_data_system(vehicle_data_system):
         self.current_time = self.network_access_node.get_time();
 
 class global_data_system(vehicle_data_system):
-    def __init__(self, network_access_node, global_data_system, current_time, data_rate=25, time_decay=0.1, data_request_rate=5, status_size=1000, deadline_range=[5, 200]):
+    def __init__(self, network_access_node, global_data_system, current_time, data_rate=10, time_decay=0.1, status_size=1000, deadline_range=[5, 200]):
         self.current_time = current_time;
         self.network_access_node = network_access_node;
         self.global_data_system = global_data_system;

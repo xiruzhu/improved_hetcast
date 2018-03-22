@@ -40,7 +40,7 @@ class packet:
         self.request, num_packets=self.num_packets); 
 
 class packet_system:
-    def __init__(self, system_id, wireless_system, message_system, log_dir="../logs/", time_decay=0.1, up_speed=1000, down_speed=1000,current_time=0, packet_size=2000, resend_rate=5):
+    def __init__(self, system_id, wireless_system, message_system, log_dir="../logs/", time_decay=0.1, up_speed=1000, down_speed=1000,current_time=0, packet_size=10000, resend_rate=5):
         self.packet_size=packet_size;
         self.sequence_number = 0;
         self.task_number = 0;
