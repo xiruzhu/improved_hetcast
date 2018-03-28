@@ -40,7 +40,7 @@ class packet:
         self.request, num_packets=self.num_packets); 
 
 class packet_system:
-    def __init__(self, system_id, wireless_system, message_system, log_dir="../logs/", time_decay=0.1, up_speed=1000, down_speed=1000,current_time=0, packet_size=10000, resend_rate=5):
+    def __init__(self, system_id, wireless_system, message_system, log_dir="../logs/", time_decay=0.1, up_speed=1000, down_speed=1000,current_time=0, packet_size=2000, resend_rate=5):
         self.packet_size=packet_size;
         self.sequence_number = 0;
         self.task_number = 0;
@@ -58,9 +58,9 @@ class packet_system:
         self.receive_queue = deque();
         self.send_queue = deque();
         self.ack_wait_queue = {};
-        self.log_file = log_dir + system_id + ".txt";
-        log_file = open(self.log_file, "w");
-        log_file.close();
+        # self.log_file = log_dir + system_id + ".txt";
+        # log_file = open(self.log_file, "w");
+        # log_file.close();
 
     def transfer_packet(self, packet):
         packet.sender_id = self.system_id;
@@ -91,9 +91,12 @@ class packet_system:
         self.send_queue.append(packet);
 
     def log_data(self, message_type, message, sender):
-        log_file = open(self.log_file, "a+");
-        log_file.write(str(message_type) + "," + message + ", " + sender + "\n")
-        log_file.close();
+        try:
+            log_file = open(self.log_file, "a+");
+            log_file.write(str(message_type) + "," + message + ", " + sender + "\n")
+            log_file.close();
+        except:
+            print("Log file failed");
 
     def create_data_packet(self, original_receiver_id, receiver_id, final_receiver_id, task_id, deadline, num_packets, data_type=message_type.DATA):
         new_packet = packet(self.system_id, original_receiver_id, receiver_id, final_receiver_id, task_id, self.current_time, self.sequence_number, deadline, data_type=data_type, num_packets=num_packets);
@@ -120,30 +123,30 @@ class packet_system:
         #First we receive data ....
         self.current_time = self.message_system.get_time();
         for i in range(min(self.receive_speed, len(self.receive_queue))):
-            received_data = self.receive_queue.pop();
+            received_data = self.receive_queue.popleft();
             if received_data.deadline < self.current_time:
                 continue;
             elif received_data.receiver_id != received_data.final_receiver_id:
                 #This means we need to transfer data ...
                 self.transfer_packet(received_data);
-                self.log_data(received_data.data_type, ", Send Time: "+ str(received_data.send_time) + ", Current Time: " + str(self.current_time), "Sender: " + received_data.sender_id)                    
+                #self.log_data(received_data.data_type, ", Send Time: "+ str(received_data.send_time) + ", Current Time: " + str(self.current_time), "Sender: " + received_data.sender_id)                    
             elif received_data.data_type == message_type.DATA:
                 if received_data.ack is True:
                     #Broadcasts do not receive acknowledgements 
                     self.send_packet(self.create_ack_packet(received_data));
                 self.wireless_system.receive_data_packet(received_data);
-                self.log_data(message_type.DATA, ", Send Time: "+ str(received_data.send_time) + ", Current Time: " + str(self.current_time), "Sender: " + received_data.sender_id)                    
+                #self.log_data(message_type.DATA, ", Send Time: "+ str(received_data.send_time) + ", Current Time: " + str(self.current_time), "Sender: " + received_data.sender_id)                    
             elif received_data.data_type == message_type.REQ:
                 #....
                 self.send_packet(self.create_ack_packet(received_data));
                 self.wireless_system.receive_request_packet(received_data);
-                self.log_data(message_type.REQ, ", Send Time: "+ str(received_data.send_time) + ", Current Time: " + str(self.current_time), "Sender: " + received_data.sender_id)                    
+                #self.log_data(message_type.REQ, ", Send Time: "+ str(received_data.send_time) + ", Current Time: " + str(self.current_time), "Sender: " + received_data.sender_id)                    
             else:
                 #Received an acknowledgement ... 
                 ack_id = "receiver:" + received_data.sender_id + "|seq_number:" + str(received_data.seq_num)
                 if ack_id in self.ack_wait_queue:
                     self.ack_wait_queue.pop(ack_id);
-                    self.log_data(message_type.ACK, ", Send Time: "+ str(received_data.send_time) + ", Current Time: " + str(self.current_time), "Sender: " + received_data.sender_id)                    
+                    #self.log_data(message_type.ACK, ", Send Time: "+ str(received_data.send_time) + ", Current Time: " + str(self.current_time), "Sender: " + received_data.sender_id)                    
         
         #Now after we handled all the received data we can handle 
         #We must handle the data with acknowledgement we have not received which is past the deadline ... 
@@ -160,7 +163,7 @@ class packet_system:
             #otherwise just wait for it to finish
         #Finally, we must handle sending data
         for i in range(min(self.send_speed, len(self.send_queue))):
-            new_packet = self.send_queue.pop();
+            new_packet = self.send_queue.popleft();
             if new_packet.ack == False:
                 self.message_system.broadcast_packet(new_packet);
             else:

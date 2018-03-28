@@ -111,6 +111,9 @@ class network_access_point:
         #The real problem is finding where to send this packet ... 
         print("TBD")
 
+    def get_success_fail_ratio(self):
+        return self.num_success_task, self.num_failed_task;
+
     def print_success_fail_ratio(self):
         print("Node ID: " + self.get_id() + " Success: ", self.num_success_task, "Failures: ", self.num_failed_task, "Total: ", self.num_failed_task + self.num_success_task);
 

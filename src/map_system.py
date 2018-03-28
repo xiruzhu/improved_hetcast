@@ -101,3 +101,12 @@ def gaussian_placement(num_access_node, map_size, access_type, wireless_range):
         access_id = str(access_type).replace(".", "_");
         access_node_list.append(access_node("access_" +  access_id + "_" + str(i), [x_pos, y_pos], access_type, wireless_range))
     return access_node_list
+
+def random_placement(num_access_node, map_size, access_type, wireless_range):
+    access_node_list = []
+    for i in range(num_access_node):
+        x_pos = np.clip(np.random.uniform(0, map_size[0]), 0, map_size[0]);
+        y_pos = np.clip(np.random.uniform(0, map_size[1]), 0, map_size[1]);
+        access_id = str(access_type).replace(".", "_");
+        access_node_list.append(access_node("access_" +  access_id + "_" + str(i), [x_pos, y_pos], access_type, wireless_range))
+    return access_node_list

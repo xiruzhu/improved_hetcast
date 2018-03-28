@@ -14,9 +14,9 @@ import traci.constants as tc
 
 PORT = 8813
 traci.init(PORT)
-simulation = wireless_system(traci, simulation_time=0);
-for j in range(20):
-    for i in range(200):
-        simulation.update();
-    simulation.print_task_rates();
+simulation = wireless_system(traci, simulation_time=1200);
+for i in range(8000):
+    if i % 400 == 0:
+        simulation.save_results("../logs/result_" + str(i) + ".json");
+    simulation.update();
 

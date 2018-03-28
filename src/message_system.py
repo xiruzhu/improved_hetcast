@@ -39,7 +39,7 @@ class message_queue:
                 self.message_system.transfer_to_packet_system(self.message_queue.pop(key));
 
 class messaging_system:
-    def __init__(self, traci, wireless_system, current_time, time_decay=0.1, num_lte=100, num_rsu=1000, lte_upload=20000, lte_down=10000, rsu_upload=20000, rsu_down=10000, veh_upload=100, veh_down=400, packet_size=2000):
+    def __init__(self, traci, wireless_system, current_time, time_decay=0.1, num_lte=100, num_rsu=1000, lte_upload=200000, lte_down=100000, rsu_upload=200000, rsu_down=100000, veh_upload=2000, veh_down=2000, packet_size=2000):
         #So in this system, we must keep track of all elements which can receive and send messages ... 
         self.wireless_system = wireless_system
         self.current_time = current_time;
@@ -81,6 +81,9 @@ class messaging_system:
             return self.vehicle_packet_systems[access_node_id];
         else:
             return None;
+
+    def receive_data_packet(self, packet):
+        return self.wireless_system.receive_data_packet(packet);
 
     def get_message_queue(self, receiver_id):
         #First we must find the packet system for the receiver
@@ -176,4 +179,3 @@ class messaging_system:
         for key in self.vehicle_packet_systems:
             self.vehicle_message_queues[key].update();
             self.vehicle_packet_systems[key].update();
-

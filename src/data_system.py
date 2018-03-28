@@ -43,11 +43,11 @@ class vehicular_data:
     def get_data_size(self, data_type):
         result = self.base_data_size;
         if data_type == data_type.MID:
-            result *= 5;
+            result *= 4;
         elif data_type == data_type.HIG:
-            result *= 25;
+            result *= 16;
         elif data_type == data_type.HUG:
-            result *= 125;
+            result *= 64;
         return result;
     
     def get_location(self):
@@ -62,7 +62,7 @@ class vehicular_data:
 #There is a decay which reduces each data's ranking 
 #Data with negative or zero rank value are removed from the system 
 class decaying_data_system:
-    def __init__(self, current_time, wireless_system, location, max_dist, value_decay=0.3, time_decay=0.1, global_system=False):
+    def __init__(self, current_time, wireless_system, location, max_dist, value_decay=0.3, time_decay=0.2, global_system=False):
         self.current_time = current_time;
         self.current_rank_system = {};
         self.data_item_dict = {};
@@ -116,7 +116,7 @@ class decaying_data_system:
     def select_item(self, minimum=1, attempts=3):
         if len(self.dist_freq) >= minimum:
         #Select data based on a zipf distribution .... 
-            zipf_index = np.random.zipf(1.2);
+            zipf_index = np.random.zipf(1.03);
             for i in range(attempts):
                 if len(self.dist_freq) > zipf_index:
                     return self.dist_freq[zipf_index];
@@ -202,8 +202,8 @@ class vehicle_data_system:
         self.global_data_system = global_data_system;
         self.status_size = status_size;
         self.deadline_range = deadline_range;
-        self.global_data_rate = global_data_rate * time_decay;
-        self.local_data_rate = local_data_rate * time_decay;
+        self.global_data_rate = global_data_rate;
+        self.local_data_rate = local_data_rate;
         self.time_decay = time_decay;
 
     def get_data(self, data_id):
@@ -232,7 +232,7 @@ class vehicle_data_system:
         if data_need is None:
             return None;
         if not data_need.check_origin(self.network_access_node.get_id()):
-            data_size = np.random.randint(0, 4);
+            data_size = round(abs(np.random.normal(loc=0, scale=2)));
             if data_size == 0:
                 data_size = data_need.get_data_size(data_type.LOW);
             elif data_size == 1:
@@ -259,16 +259,16 @@ class vehicle_data_system:
             if local_rsu_id != None:
                 deadline = np.random.uniform(self.deadline_range[0], self.deadline_range[1]) + self.current_time;
                 self.network_access_node.upload_data(self.network_access_node.get_id(),"status:" + self.network_access_node.get_id() + ":" + str(self.current_time), self.status_size, local_rsu_id, deadline);
-        data_rate = self.local_data_rate;
-        likelihood = np.random.ranf();
-        if likelihood <= data_rate:
-            self.select_data(True);
-        data_rate = self.global_data_rate;
-        if likelihood <= data_rate:
-            self.select_data(True);
+            data_rate = self.local_data_rate;
+            likelihood = np.random.ranf();
+            if likelihood <= data_rate:
+                self.select_data(True);
+            data_rate = self.global_data_rate;
+            if likelihood <= data_rate:
+                self.select_data(True);
 
 class fixed_data_system(vehicle_data_system):
-    def __init__(self, network_access_node, global_data_system, current_time, time_decay=0.1, data_request_rate=0, status_size=1000, deadline_range=[5, 200]):
+    def __init__(self, network_access_node, global_data_system, current_time, time_decay=0.1, status_size=1000, deadline_range=[5, 200]):
         self.current_time = current_time;
         self.network_access_node = network_access_node;
         self.global_data_system = global_data_system;
@@ -295,7 +295,7 @@ class global_data_system(vehicle_data_system):
         self.status_size = status_size;
         self.deadline_range = deadline_range;        
         self.time_decay = time_decay;    
-        self.data_rate = data_rate * time_decay;
+        self.data_rate = data_rate;
     #Note we send status messages once every second
 
     def get_data(self, data_id):
@@ -303,11 +303,12 @@ class global_data_system(vehicle_data_system):
 
     def update(self):
         self.current_time = self.network_access_node.get_time();
-        data_rate = self.data_rate;
-        while data_rate > 0:
-            likelihood = np.random.ranf();
-            if likelihood <= data_rate:
-                self.select_data(False, True);
-                data_rate -= likelihood;
-            else:
-                break;
+        if math.ceil(self.current_time) - self.current_time < self.time_decay:
+            data_rate = self.data_rate;
+            while data_rate > 0:
+                likelihood = np.random.ranf();
+                if likelihood <= data_rate:
+                    self.select_data(False, True);
+                    data_rate -= likelihood;
+                else:
+                    break;
