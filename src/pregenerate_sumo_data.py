@@ -1,6 +1,6 @@
 import os, sys
 from wireless_system import wireless_system
-
+from tqdm import tqdm
 # sumo -c cologne.sumocfg --remote-port=8813
 
 if 'SUMO_HOME' in os.environ:
@@ -26,7 +26,7 @@ for edge_id in edge_id_list:
 for lane_id in traci.lane.getIDList():
     edge_dict[traci.lane.getEdgeID(lane_id)][lane_id] = traci.lane.getMaxSpeed(lane_id);
     
-for i in range(7200):
+for i in tqdm(range(7200)):
     if i % 300:
         data_file = open("../data/precomputed_data_" + str(i) + ".json", "w");
         data_file.write(json.dumps(simulation_data));
