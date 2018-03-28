@@ -22,7 +22,7 @@ slow_down_incidence = 0.01
 
 edge_dict = {};
 for edge_id in edge_id_list:
-    edge_dict[edge_id]["original_lanes"] = {};
+    edge_dict[edge_id] = {};
 for lane_id in traci.lane.getIDList():
     edge_dict[traci.lane.getEdgeID(lane_id)][lane_id] = traci.lane.getMaxSpeed(lane_id);
     
