@@ -66,7 +66,6 @@ for i in tqdm(range(7200)):
         i = 0;
         for edge_id in selected_ids:
             slowed_down_edges[edge_id] = int(duration_distribution[i])
-            edge_dict[edge_id].slow_down_edge();
             for lane_id in edge_dict[edge_id]:
                 traci.lane.setMaxSpeed(lane_id, speed_distribution[i]);
             i += 1;
