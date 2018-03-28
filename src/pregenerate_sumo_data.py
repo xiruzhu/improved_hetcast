@@ -84,4 +84,4 @@ for i in tqdm(range(7200)):
     simulation_data[i]["edge_average_speed"] = {};
     for edge_id in edge_id_list:
         simulation_data[i]["edge_average_speed"][edge_id] = traci.edge.getLastStepMeanSpeed(edge_id);
-    self.traci.simulationStep();
+    traci.simulationStep();
