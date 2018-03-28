@@ -1,6 +1,7 @@
 import os, sys
 from wireless_system import wireless_system
 from tqdm import tqdm
+import numpy as np
 # sumo -c cologne.sumocfg --remote-port=8813
 
 if 'SUMO_HOME' in os.environ:
