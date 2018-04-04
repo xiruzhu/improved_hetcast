@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, json
 from wireless_system import wireless_system
 from tqdm import tqdm
 import numpy as np
@@ -84,4 +84,4 @@ for i in tqdm(range(7200)):
     simulation_data[i]["edge_average_speed"] = {};
     for edge_id in edge_id_list:
         simulation_data[i]["edge_average_speed"][edge_id] = traci.edge.getLastStepMeanSpeed(edge_id);
-
+    traci.simulationStep();
