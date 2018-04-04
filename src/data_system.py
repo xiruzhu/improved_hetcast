@@ -19,7 +19,10 @@
 
 import numpy as np
 from enum import Enum
+from scipy.ndimage.filters import gaussian_filter
 import math
+import scipy.misc
+import matplotlib.pyplot as plt;
 
 class data_type(Enum):
     LOW = 0
@@ -29,16 +32,26 @@ class data_type(Enum):
 
 GLOBAL_DATA = "GLOBAL_DATA"
 
-class vehicular_data:
-    def __init__(self, origin, data_id, location):
-        self.origin = origin;
-        self.data_id = data_id;
-        self.rank_value = self.generate_rank_value();
-        self.location = location;
-        self.base_data_size =  max(200, np.random.normal(1000, 500));
+#Revamp of the data system of our simulator. 
+#Based on the following data logic
+#In the map exist several point of interests which affects a data point's 
 
+class sensing_data():
+    def __init__(self, sensor_id, data_id, location_sensed, sensing_rank):
+        self.sensor_id = sensor_id;
+        self.data_id = data_id;
+        self.location_sensed = location_sensed;
+        self.sensing_rank = sensing_rank;
+        self.base_data_size = max(200, np.random.normal(1000, 500));
+    
     def check_origin(self, checked_origin):
-        return self.origin == checked_origin;
+        return self.sensor_id == checked_origin;
+    
+    def get_rank(self):
+        return self.sensing_rank;
+
+    def get_location(self):
+        return self.location_sensed;
 
     def get_data_size(self, data_type):
         result = self.base_data_size;
@@ -49,14 +62,84 @@ class vehicular_data:
         elif data_type == data_type.HUG:
             result *= 64;
         return result;
-    
-    def get_location(self):
-        return self.location;
 
-    def generate_rank_value(self):
-        #The rank value is generated based on a normal distribution curve
-        normal_rank_values = max(0, np.random.normal(1, .5));
-        return normal_rank_values;
+class pov_data():
+    def __init__(self, rank, position, deadline):
+        self.rank = rank;
+        self.position = position;
+        self.deadline = deadline;
+    
+    def get_rank(self):
+        return self.rank;
+
+    def is_expired(self, current_time):
+        return current_time >= self.deadline;
+
+    def update_position(self, position):
+        self.position = position;
+
+    def get_position(self):
+        return self.position;
+
+class sensing_priority_system:
+    def __init__(self, data_manager, map_size=(32000, 32000), scale=32, update_rate=10, num_povs=300, mean_pov_duration=200): 
+        self.data_manager = data_manager;
+        self.map_size = map_size;
+        self.scale = scale;
+        self.update_rate = update_rate;
+        self.num_povs = num_povs;
+        self.mean_pov_duration = mean_pov_duration;
+        self.sensing_map = None;
+        #self.base_sensing_map = np.abs(np.random.normal(size=(int(self.map_size[0]/self.scale), int(self.map_size[1]/self.scale))));
+        self.pov_list = [];
+
+    def set_map_value(self, position, value):
+        scaled_position = [int(position[0]/self.scale), int(position[1]/self.scale)];
+        self.sensing_map[scaled_position[0], scaled_position[1]] += value;
+    
+    def get_map_value(self, position):
+        scaled_position = [int(position[0]/self.scale), int(position[1]/self.scale)];
+        return self.sensing_map[scaled_position[0], scaled_position[1]];
+
+    def update_sensing_map(self, sigma=30):
+        #so the map is set up
+        current_time = self.data_manager.get_time();
+        self.sensing_map = np.abs(np.random.normal(0, 0.08, (int(self.map_size[0]/self.scale), int(self.map_size[1]/self.scale))))
+        #self.sensing_map = np.copy(self.base_sensing_map);
+        new_pov_list = [];
+        for item in self.pov_list:
+            if not item.is_expired(current_time):
+                #we update the object 
+                self.set_map_value(item.get_position(), item.get_rank());
+                new_pov_list.append(item);
+        self.pov_list = new_pov_list;
+        while len(self.pov_list) < self.num_povs:
+            #Add a new point of interest ... 
+            x = np.random.uniform(0, self.map_size[0])
+            y = np.random.uniform(0, self.map_size[1])
+            duration = abs(np.random.normal(self.mean_pov_duration, self.mean_pov_duration/2)) + current_time;
+            data_rank = np.random.uniform(1, 10);
+            self.pov_list.append(pov_data(data_rank, [x, y], duration));
+            self.set_map_value([x, y], data_rank);
+        self.sensing_map = gaussian_filter(self.sensing_map, sigma);
+        
+    def save_sensing_map(self, name, directory="../figures/"):
+        fig = plt.imshow(self.sensing_map, cmap='jet', interpolation='sinc')
+        plt.savefig(directory + name + '_coverage_visualization.png')
+        plt.close();
+        del fig;
+
+    def update(self):
+        current_time = self.data_manager.get_time();
+        if current_time == math.ceil(current_time) and round(current_time) % self.update_rate == 0:
+            self.update_sensing_map();            
+
+class temp_timer:
+    def __init__(self):
+        self.current_time = 0;
+
+    def get_time(self):
+        return self.current_time;
 
 #First, each vehicle generates data each second 
 #There is a decay which reduces each data's ranking 
@@ -89,9 +172,9 @@ class decaying_data_system:
         self.data_item_dict[data_item.data_id] = data_item;
         #Ranking is based upon distance and its randomly pulled value ... 
         if self.global_system:
-            self.current_rank_system[data_item.data_id] = data_item.rank_value;
+            self.current_rank_system[data_item.data_id] = data_item.get_rank();
         else:
-            self.current_rank_system[data_item.data_id] = data_item.rank_value * self.get_distance(data_item.get_location())/self.max_dist;
+            self.current_rank_system[data_item.data_id] = data_item.get_rank() * min(1, self.max_dist/(self.get_distance(data_item.get_location()) + 1));
         self.item_added_flag = True;
 
     #Updates the decay system 
@@ -132,12 +215,12 @@ class complete_data_system:
         self.wireless_system = wireless_system;
         position = [0, 0]
         self.decay_system_mat = [];
-
+        self.sensing_data_system = sensing_priority_system(self, map_size=map_size);
         #Global Data System
         self.global_data_size = global_data_system_size;
         self.global_data_system = decaying_data_system(current_time, wireless_system, [0, 0], 0, 0, time_decay=time_decay, global_system=True);
         for i in range(global_data_system_size):
-            self.global_data_system.add_data_item(vehicular_data(GLOBAL_DATA, GLOBAL_DATA + ":" + str(i), [0, 0]));
+            self.global_data_system.add_data_item(sensing_data(GLOBAL_DATA, GLOBAL_DATA + ":" + str(i), [0, 0], np.random.normal()));
         self.global_data_system.update();
 
         #Create a final system which includes all data item without distance 
@@ -163,12 +246,19 @@ class complete_data_system:
                 system.add_data_item(data_item);
         self.global_decay_system.add_data_item(data_item);
     
+    def get_time(self):
+        return self.wireless_system.get_time();
+
     def update(self):
         self.current_time = self.wireless_system.get_time();
+        self.sensing_data_system.update();
         for mat_list in self.decay_system_mat:
             for system in mat_list:
                 system.update();
         self.global_decay_system.update();
+
+    def get_data_rank(self, position):
+        return self.sensing_data_system.get_map_value(position);
 
     def randomly_select_local_data(self):
         #This is meant to randomly select local data ... 
@@ -252,7 +342,7 @@ class vehicle_data_system:
         self.current_time = self.network_access_node.get_time();
         if math.ceil(self.current_time) - self.current_time < self.time_decay:
             new_data_id = "data_id:" + self.network_access_node.get_id() + "," + str(self.current_time);
-            self.data_item_dict[new_data_id] = vehicular_data(self.network_access_node.get_id(), new_data_id, self.network_access_node.get_location());
+            self.data_item_dict[new_data_id] = sensing_data(self.network_access_node.get_id(), new_data_id, self.network_access_node.get_location(), self.global_data_system.get_data_rank(self.network_access_node.get_location()));
             self.global_data_system.add_data_item(self.data_item_dict[new_data_id]);
             #Time to send a status message ... we can directly send data as such without need for scheduler ... 
             local_rsu_id = self.network_access_node.get_local_access_node_id();

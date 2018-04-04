@@ -92,6 +92,13 @@ class map_system:
         plt.close();
         del fig;
 
+def intersection_placement(traci, num_access_node, map_size, access_node, wireless_range):
+    intersection_position = {};
+    intersection_id_list = traci.junction.getIDList();
+    for intersection_id in intersection_id_list:
+        intersection_position[intersection_id] = traci.junction.getPosition(intersection_id);
+        
+
 #Return a list of access point centered around the center of the map ... 
 def gaussian_placement(num_access_node, map_size, access_type, wireless_range):
     access_node_list = []
