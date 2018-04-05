@@ -9,7 +9,7 @@ class message_type(Enum):
     REQ = 2
 
 class packet:
-    def __init__(self, sender_id, original_sender_id, receiver_id, final_receiver_id, task_id, send_time, seq_num, deadline, data_type=message_type.DATA, request=None, num_packets=1):
+    def __init__(self, sender_id, original_sender_id, receiver_id, final_receiver_id, task_id, send_time, seq_num, deadline, data_type=message_type.DATA, request=None, num_packets=1, resend_rate=2):
         self.sender_id = sender_id;
         self.original_sender_id = original_sender_id;
         self.receiver_id = receiver_id;
@@ -20,6 +20,7 @@ class packet:
         self.request = request;
         self.task_id = task_id;
         self.deadline = deadline;
+        self.resend_rate = resend_rate;
         self.ack = True;
         self.num_packets = num_packets; #Number of packets for this chain ... 
 
@@ -40,7 +41,7 @@ class packet:
         self.request, num_packets=self.num_packets); 
 
 class packet_system:
-    def __init__(self, system_id, wireless_system, message_system, log_dir="../logs/", time_decay=0.1, up_speed=1000, down_speed=1000,current_time=0, packet_size=2000, resend_rate=5):
+    def __init__(self, system_id, wireless_system, message_system, log_dir="../logs/", time_decay=0.1, up_speed=1000, down_speed=1000,current_time=0, packet_size=2000, resend_rate=2):
         self.packet_size=packet_size;
         self.sequence_number = 0;
         self.task_number = 0;
@@ -99,21 +100,27 @@ class packet_system:
             print("Log file failed");
 
     def create_data_packet(self, original_receiver_id, receiver_id, final_receiver_id, task_id, deadline, num_packets, data_type=message_type.DATA):
-        new_packet = packet(self.system_id, original_receiver_id, receiver_id, final_receiver_id, task_id, self.current_time, self.sequence_number, deadline, data_type=data_type, num_packets=num_packets);
+        new_packet = packet(self.system_id, original_receiver_id, receiver_id, final_receiver_id, 
+        task_id, self.current_time, self.sequence_number, deadline, data_type=data_type, 
+        num_packets=num_packets, resend_rate=self.resend_rate);
         self.sequence_number += 1;
         if self.sequence_number % 2147483647 == 0:
             self.sequence_number = 0;
         return new_packet;
 
     def create_req_packet(self, original_receiver_id, receiver_id, final_receiver_id, task_id, request, deadline, data_type=message_type.REQ):
-        new_packet = packet(self.system_id, original_receiver_id, receiver_id, final_receiver_id, task_id, self.current_time, self.sequence_number, deadline, data_type, request=request);
+        new_packet = packet(self.system_id, original_receiver_id, receiver_id, 
+        final_receiver_id, task_id, self.current_time, self.sequence_number, 
+        deadline, data_type, request=request, resend_rate=self.resend_rate);
         self.sequence_number += 1;
         if self.sequence_number % 2147483647 == 0:
             self.sequence_number = 0;
         return new_packet;
 
     def create_ack_packet(self, received_packet):
-        new_packet = packet(self.system_id, self.system_id, received_packet.sender_id, received_packet.sender_id, received_packet.task_id, self.current_time, received_packet.seq_num, self.current_time + self.resend_rate, data_type=message_type.ACK);
+        new_packet = packet(self.system_id, self.system_id, received_packet.sender_id, 
+        received_packet.sender_id, received_packet.task_id, self.current_time, received_packet.seq_num, 
+        self.current_time + self.resend_rate, data_type=message_type.ACK, resend_rate=self.resend_rate);
         return new_packet;
 
     def get_time(self):
@@ -155,10 +162,11 @@ class packet_system:
             if self.ack_wait_queue[item].deadline < self.current_time:
                 #Thus, this item can no longer be send and has failed ... 
                 old_packet = self.ack_wait_queue.pop(item);
-            elif self.ack_wait_queue[item].send_time + self.resend_rate > self.current_time:
+            elif self.ack_wait_queue[item].send_time + self.ack_wait_queue[item].resend_rate > self.current_time:
                 #We need to resend the data as we did not receive the acknowledgement ....  
                 old_packet = self.ack_wait_queue.pop(item);
                 old_packet.send_time = self.current_time;
+                old_packet.resend_rate *= 2;
                 self.transfer_packet(old_packet);
             #otherwise just wait for it to finish
         #Finally, we must handle sending data

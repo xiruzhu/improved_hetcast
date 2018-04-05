@@ -43,10 +43,13 @@ class sensing_data():
         self.location_sensed = location_sensed;
         self.sensing_rank = sensing_rank;
         self.base_data_size = max(200, np.random.normal(1000, 500));
-    
+
+    def get_origin(self):
+        return self.sensor_id;
+
     def check_origin(self, checked_origin):
         return self.sensor_id == checked_origin;
-    
+
     def get_rank(self):
         return self.sensing_rank;
 
@@ -64,13 +67,17 @@ class sensing_data():
         return result;
 
 class pov_data():
-    def __init__(self, rank, position, deadline):
+    def __init__(self, rank, position, deadline, duration, update_rate):
         self.rank = rank;
         self.position = position;
         self.deadline = deadline;
+        self.rank_decay = rank/duration * update_rate;
     
     def get_rank(self):
         return self.rank;
+
+    def decay_rank(self):
+        self.rank -= self.rank_decay;
 
     def is_expired(self, current_time):
         return current_time >= self.deadline;
@@ -99,9 +106,9 @@ class sensing_priority_system:
     
     def get_map_value(self, position):
         scaled_position = [int(position[0]/self.scale), int(position[1]/self.scale)];
-        return self.sensing_map[scaled_position[0], scaled_position[1]];
+        return self.sensing_map[scaled_position[0], scaled_position[1]] * 1/(1 + abs(np.random.normal()))
 
-    def update_sensing_map(self, sigma=30):
+    def update_sensing_map(self, sigma=25):
         #so the map is set up
         current_time = self.data_manager.get_time();
         self.sensing_map = np.abs(np.random.normal(0, 0.08, (int(self.map_size[0]/self.scale), int(self.map_size[1]/self.scale))))
@@ -110,6 +117,7 @@ class sensing_priority_system:
         for item in self.pov_list:
             if not item.is_expired(current_time):
                 #we update the object 
+                item.decay_rank();
                 self.set_map_value(item.get_position(), item.get_rank());
                 new_pov_list.append(item);
         self.pov_list = new_pov_list;
@@ -117,12 +125,16 @@ class sensing_priority_system:
             #Add a new point of interest ... 
             x = np.random.uniform(0, self.map_size[0])
             y = np.random.uniform(0, self.map_size[1])
-            duration = abs(np.random.normal(self.mean_pov_duration, self.mean_pov_duration/2)) + current_time;
             data_rank = np.random.uniform(1, 10);
-            self.pov_list.append(pov_data(data_rank, [x, y], duration));
+            deadline = abs(np.random.normal(self.mean_pov_duration + data_rank, self.mean_pov_duration/2)) + current_time;
+            self.pov_list.append(pov_data(data_rank, [x, y], deadline, deadline - current_time, self.update_rate));
             self.set_map_value([x, y], data_rank);
         self.sensing_map = gaussian_filter(self.sensing_map, sigma);
-        
+        max_val = np.amax(np.amax(self.sensing_map));
+        min_val = np.amin(np.amin(self.sensing_map));
+        self.sensing_map = (self.sensing_map - min_val)/(max_val - min_val)
+        self.save_sensing_map(str(current_time));
+
     def save_sensing_map(self, name, directory="../figures/"):
         fig = plt.imshow(self.sensing_map, cmap='jet', interpolation='sinc')
         plt.savefig(directory + name + '_coverage_visualization.png')
@@ -199,7 +211,7 @@ class decaying_data_system:
     def select_item(self, minimum=1, attempts=3):
         if len(self.dist_freq) >= minimum:
         #Select data based on a zipf distribution .... 
-            zipf_index = np.random.zipf(1.03);
+            zipf_index = np.random.zipf(1.1);
             for i in range(attempts):
                 if len(self.dist_freq) > zipf_index:
                     return self.dist_freq[zipf_index];
@@ -285,7 +297,7 @@ class vehicle_data_system:
     #This message can be considered of size low
     #Furthermore, the system stores data available ... 
     
-    def __init__(self, network_access_node, global_data_system, current_time, global_data_rate=0.10, local_data_rate=0.20, time_decay=0.1, data_request_rate=1, status_size=1000, deadline_range=[8, 200]):
+    def __init__(self, network_access_node, global_data_system, current_time, global_data_rate=0.10, local_data_rate=0.20, time_decay=0.1, data_request_rate=1, status_size=1000, deadline_range=[4, 30]):
         self.current_time = current_time;
         self.network_access_node = network_access_node;
         self.data_item_dict = {};
@@ -334,7 +346,7 @@ class vehicle_data_system:
 
             deadline = np.random.uniform(self.deadline_range[0], self.deadline_range[1]) + self.current_time;
             request = {"data_id":data_need.data_id, "data_size":data_size, "deadline":deadline};
-            self.network_access_node.request_data(self.network_access_node.get_id(), "request:" + self.network_access_node.get_id() + ":" + str(self.current_time), self.status_size, request, data_need.origin, deadline);
+            self.network_access_node.request_data(self.network_access_node.get_id(), "request:" + self.network_access_node.get_id() + ":" + str(self.current_time), self.status_size, request, data_need.get_origin(), deadline);
         return data_need;
 
     #Note we send status messages once every second

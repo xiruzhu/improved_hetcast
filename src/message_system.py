@@ -163,6 +163,7 @@ class messaging_system:
                 new_vehicle_dict[vehicle_id] = self.vehicle_packet_systems[vehicle_id];
             else:
                 new_vehicle_dict[vehicle_id] = packet_system(vehicle_id, self.wireless_system, self, time_decay=self.time_decay, up_speed=self.veh_upload, down_speed=self.veh_down, packet_size=self.packet_size);
+        
         self.vehicle_packet_systems = new_vehicle_dict;
 
     def get_time(self):
@@ -179,3 +180,9 @@ class messaging_system:
         for key in self.vehicle_packet_systems:
             self.vehicle_message_queues[key].update();
             self.vehicle_packet_systems[key].update();
+            # if len(self.vehicle_message_queues[key].message_queue) > 0:
+            #     print("Receive Queue Length: ", len(self.vehicle_message_queues[key].message_queue))
+
+            # if len(self.vehicle_packet_systems[key].receive_queue) > 0 or len(self.vehicle_packet_systems[key].send_queue) > 0:
+            #     print("Receive Queue Length: ", len(self.vehicle_packet_systems[key].receive_queue))
+            #     print("Send Queue Length", len(self.vehicle_packet_systems[key].send_queue))
